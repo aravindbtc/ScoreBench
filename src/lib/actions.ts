@@ -14,7 +14,7 @@ import type { Team, Score } from './types';
 
 export async function verifyAdminPassword(password: string) {
   'use server';
-  if (password === (process.env.ADMIN_PASS || 'hackeval@2025')) {
+  if (password === (process.env.ADMIN_PASS || 'VMRF@2025')) {
     return { success: true };
   }
   return { success: false, message: 'Incorrect password.' };
