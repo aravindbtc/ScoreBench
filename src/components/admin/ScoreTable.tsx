@@ -17,19 +17,23 @@ import {
 import type { CombinedScoreData, Score } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Trash2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 interface ScoreTableProps {
   data: CombinedScoreData[];
+  onDeleteRequest: (team: CombinedScoreData) => void;
 }
 
 const PanelScoreDetails = ({ panelNo, score }: { panelNo: number, score?: Score }) => {
   if (!score) {
     return (
-      <div className="p-4 text-sm text-muted-foreground">Panel {panelNo}: No score submitted.</div>
+      <div className="p-4 text-sm text-center text-muted-foreground bg-muted/20 rounded-lg h-full flex items-center justify-center">Panel {panelNo}: No score submitted.</div>
     );
   }
   return (
-    <Card className="bg-background/50">
+    <Card className="bg-background/50 h-full">
         <CardHeader className="p-4">
             <CardTitle className="text-base">Panel {panelNo} Score: <span className="text-primary">{score.total}</span></CardTitle>
         </CardHeader>
@@ -56,7 +60,15 @@ const PanelScoreDetails = ({ panelNo, score }: { panelNo: number, score?: Score 
 };
 
 
-export function ScoreTable({ data }: ScoreTableProps) {
+export function ScoreTable({ data, onDeleteRequest }: ScoreTableProps) {
+  if (data.length === 0) {
+    return (
+      <Card className="text-center p-8">
+        <h3 className="text-lg font-semibold">No Teams Found</h3>
+        <p className="text-muted-foreground">Upload teams or add a new one to get started.</p>
+      </Card>
+    );
+  }
   return (
     <Card>
       <Table>
@@ -65,7 +77,8 @@ export function ScoreTable({ data }: ScoreTableProps) {
             <TableHead className='w-[40px]'></TableHead>
             <TableHead>Team Name</TableHead>
             <TableHead>Project Name</TableHead>
-            <TableHead className="text-right">Average Score</TableHead>
+            <TableHead className="text-right w-[150px]">Average Score</TableHead>
+            <TableHead className="text-right w-[80px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -87,9 +100,21 @@ export function ScoreTable({ data }: ScoreTableProps) {
                       <Badge variant="outline">N/A</Badge>
                     )}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDeleteRequest(item); }}>
+                          <Trash2 className="h-4 w-4 text-destructive/70" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Delete Team</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell colSpan={4} className="p-0">
+                  <TableCell colSpan={5} className="p-0">
                      <AccordionContent>
                       <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <PanelScoreDetails panelNo={1} score={item.scores.panel1} />

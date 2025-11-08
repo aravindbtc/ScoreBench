@@ -8,6 +8,10 @@ import {
   getDocs,
   getDoc,
   setDoc,
+  addDoc,
+  deleteDoc,
+  query,
+  where,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Team, Score } from './types';
@@ -18,6 +22,45 @@ export async function verifyAdminPassword(password: string) {
     return { success: true };
   }
   return { success: false, message: 'Incorrect password.' };
+}
+
+export async function addTeam(team: Omit<Team, 'id'>) {
+  'use server';
+  try {
+    const teamsCollection = collection(db, 'teams');
+    await addDoc(teamsCollection, team);
+    revalidatePath('/admin');
+    return { success: true, message: `Team "${team.teamName}" added successfully.` };
+  } catch (error) {
+    console.error('Error adding team:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { success: false, message: `Failed to add team: ${errorMessage}` };
+  }
+}
+
+export async function deleteTeam(teamId: string) {
+  'use server';
+  try {
+    const batch = writeBatch(db);
+    
+    // Delete the team document
+    const teamDocRef = doc(db, 'teams', teamId);
+    batch.delete(teamDocRef);
+
+    // Delete the corresponding scores document
+    const scoreDocRef = doc(db, 'scores', teamId);
+    batch.delete(scoreDocRef);
+    
+    await batch.commit();
+
+    revalidatePath('/admin');
+    revalidatePath('/jury');
+    return { success: true, message: 'Team and associated scores deleted.' };
+  } catch (error) {
+    console.error('Error deleting team:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { success: false, message: `Failed to delete team: ${errorMessage}` };
+  }
 }
 
 export async function uploadTeams(teams: Omit<Team, 'id'>[]) {
@@ -36,6 +79,7 @@ export async function uploadTeams(teams: Omit<Team, 'id'>[]) {
 
     await batch.commit();
     revalidatePath('/admin/upload');
+    revalidatePath('/admin');
     revalidatePath('/jury');
     return { success: true, message: `${teams.length} teams uploaded successfully.` };
   } catch (error) {
@@ -137,6 +181,8 @@ export async function seedInitialData() {
       console.log('Teams collection not empty, skipping seed.');
     }
     
+    revalidatePath('/');
+    revalidatePath('/admin');
     return { success: true, message: "Initial data check/seed complete." };
   } catch (error) {
     console.error("Error seeding data:", error);
