@@ -1,13 +1,11 @@
 
 import { CustomizeLoginForm } from "@/components/admin/CustomizeLoginForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getLoginBackground } from "@/lib/actions";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
-export default async function CustomizeLoginPage() {
-    const currentBackground = await getLoginBackground();
+export default function CustomizeLoginPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Customize Login Page</h1>
@@ -20,8 +18,8 @@ export default async function CustomizeLoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-                 <CustomizeLoginForm currentBackground={currentBackground} />
+            <Suspense fallback={<Skeleton className="h-[450px] w-full" />}>
+                 <CustomizeLoginForm />
             </Suspense>
         </CardContent>
       </Card>

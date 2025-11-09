@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,27 +14,37 @@ import { Loader2 } from 'lucide-react';
 import { ImageUploadForm } from './ImageUploadForm';
 import { ImagePlaceholder } from '@/lib/types';
 import NextImage from 'next/image';
-import { updateLoginBackground } from '@/lib/actions';
+import { updateLoginBackground, getLoginBackground } from '@/lib/actions';
 import { Separator } from '../ui/separator';
+import { Skeleton } from '../ui/skeleton';
 
 const urlSchema = z.object({
   imageUrl: z.string().url('Please enter a valid URL.'),
 });
 
-interface CustomizeLoginFormProps {
-  currentBackground: ImagePlaceholder;
-}
-
-export function CustomizeLoginForm({ currentBackground }: CustomizeLoginFormProps) {
+export function CustomizeLoginForm() {
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   const form = useForm<{ imageUrl: string }>({
     resolver: zodResolver(urlSchema),
     defaultValues: {
-      imageUrl: currentBackground.imageUrl,
+      imageUrl: '',
     },
   });
+
+  useEffect(() => {
+    async function fetchInitialBackground() {
+      setIsLoading(true);
+      const bg = await getLoginBackground();
+      if (bg) {
+        form.reset({ imageUrl: bg.imageUrl });
+      }
+      setIsLoading(false);
+    }
+    fetchInitialBackground();
+  }, [form]);
 
   const handleUploadComplete = (url: string) => {
     form.setValue('imageUrl', url, { shouldValidate: true });
@@ -59,6 +69,10 @@ export function CustomizeLoginForm({ currentBackground }: CustomizeLoginFormProp
   };
 
   const imageUrl = form.watch('imageUrl');
+
+  if (isLoading) {
+    return <Skeleton className="h-[450px] w-full" />;
+  }
 
   return (
     <div className="space-y-8">
