@@ -1,27 +1,20 @@
 
-import Image from 'next/image';
+import { Suspense } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { JuryLogin } from '@/components/auth/JuryLogin';
 import { AdminLogin } from '@/components/auth/AdminLogin';
 import { AppLogo } from '@/components/layout/AppLogo';
-import { getLoginBackground } from '@/lib/actions';
+import { LoginBackground } from '@/components/auth/LoginBackground';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default async function LoginPage() {
-  const backgroundImage = await getLoginBackground();
-
+export default function LoginPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
-      {backgroundImage && (
-        <Image
-          src={backgroundImage.imageUrl}
-          alt={backgroundImage.description}
-          fill
-          className="object-cover -z-10 opacity-20"
-          data-ai-hint={backgroundImage.imageHint}
-          priority
-        />
-      )}
+      <Suspense fallback={<Skeleton className="absolute inset-0 -z-10" />}>
+        <LoginBackground />
+      </Suspense>
+      
       <div className="absolute top-6 left-6">
         <AppLogo />
       </div>
