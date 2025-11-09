@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -35,12 +35,13 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
     resolver: zodResolver(fileSchema),
   });
 
-  const onSubmit = async (data: { imageFile: FileList }) => {
+  const onSubmit = (data: { imageFile: FileList }) => {
     setIsUploading(true);
     setUploadProgress(0);
     const file = data.imageFile[0];
-    const storageRef = ref(storage, `uploads/${Date.now()}-${file.name}`);
+    if (!file) return;
 
+    const storageRef = ref(storage, `uploads/${Date.now()}-${file.name}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     uploadTask.on(
@@ -51,25 +52,34 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
       },
       (error) => {
         console.error("Upload failed", error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         toast({
           title: 'Upload Failed',
-          description: errorMessage,
+          description: error.message || 'An unknown error occurred during upload.',
           variant: 'destructive',
         });
         setIsUploading(false);
         setUploadProgress(0);
       },
-      async () => {
-        const url = await getDownloadURL(uploadTask.snapshot.ref);
-        onUploadComplete(url);
-        toast({
-          title: 'Upload Successful',
-          description: 'Image URL has been pasted into the form below.',
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          onUploadComplete(downloadURL);
+          toast({
+            title: 'Upload Successful',
+            description: 'Image URL has been pasted into the form below.',
+          });
+          form.reset();
+          setIsUploading(false);
+          setUploadProgress(0);
+        }).catch((error) => {
+             console.error("Failed to get download URL", error);
+             toast({
+                title: 'Upload Failed',
+                description: 'Could not get the image URL after upload.',
+                variant: 'destructive',
+             });
+             setIsUploading(false);
+             setUploadProgress(0);
         });
-        form.reset();
-        setIsUploading(false);
-        setUploadProgress(0);
       }
     );
   };
