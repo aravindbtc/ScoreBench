@@ -1,28 +1,28 @@
-import { ImageUploadForm } from "@/components/admin/ImageUploadForm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info } from "lucide-react";
 
-export default function UploadImagePage() {
+import { CustomizeLoginForm } from "@/components/admin/CustomizeLoginForm";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getLoginBackground } from "@/lib/actions";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+
+export default async function CustomizeLoginPage() {
+    const currentBackground = await getLoginBackground();
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Upload Custom Image</h1>
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertTitle>How to update the login background</AlertTitle>
-        <AlertDescription>
-         This form allows you to upload an image to Firebase Storage. After a successful upload, it will provide you with a code snippet. To change the login screen background, you must copy this snippet and replace the existing content in the <code className="font-semibold text-foreground">src/lib/placeholder-images.json</code> file.
-        </AlertDescription>
-      </Alert>
+      <h1 className="text-3xl font-bold tracking-tight">Customize Login Page</h1>
+      
       <Card className="max-w-3xl">
         <CardHeader>
-          <CardTitle>Upload Image to Firebase Storage</CardTitle>
+          <CardTitle>Update Login Background</CardTitle>
           <CardDescription>
-            Select an image file from your computer to begin the upload process.
+            Upload a new image to Firebase Storage or provide an image URL. After setting the URL, click 'Save Background' to update the login screen.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ImageUploadForm />
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                 <CustomizeLoginForm currentBackground={currentBackground} />
+            </Suspense>
         </CardContent>
       </Card>
     </div>

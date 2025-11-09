@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -23,6 +24,7 @@ import { seedInitialData } from '@/lib/actions';
 export function JuryLogin() {
   const [selectedJury, setSelectedJury] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -57,14 +59,14 @@ export function JuryLogin() {
   };
   
   const handleSeed = async () => {
-    setIsLoading(true);
+    setIsSeeding(true);
     const result = await seedInitialData();
     if (result.success) {
       toast({ title: 'Success', description: result.message });
     } else {
       toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
-    setIsLoading(false);
+    setIsSeeding(false);
   }
 
   return (
@@ -90,8 +92,8 @@ export function JuryLogin() {
           <div className='text-center text-sm text-muted-foreground p-4 border rounded-md'>
             <p>No jury panels found.</p>
             <p>An admin needs to set them up.</p>
-            <Button onClick={handleSeed} disabled={isLoading} variant="link" size="sm" className="mt-2">
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Seed Demo Data'}
+            <Button onClick={handleSeed} disabled={isSeeding} variant="link" size="sm" className="mt-2">
+              {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Seed Demo Data'}
             </Button>
           </div>
         )}

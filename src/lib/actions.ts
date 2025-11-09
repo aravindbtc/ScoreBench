@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -12,9 +13,11 @@ import {
   deleteDoc,
   query,
   where,
+  updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Team, Score } from './types';
+import type { Team, Score, ImagePlaceholder } from './types';
+import { PlaceHolderImages } from './placeholder-images';
 
 export async function verifyAdminPassword(password: string) {
   'use server';
@@ -134,33 +137,57 @@ export async function submitScore(
   }
 }
 
+export async function getLoginBackground(): Promise<ImagePlaceholder> {
+  try {
+    const configDocRef = doc(db, 'appConfig', 'loginBackground');
+    const docSnap = await getDoc(configDocRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as ImagePlaceholder;
+    }
+  } catch (error) {
+    console.error("Error fetching login background from Firestore:", error);
+  }
+  // Fallback to the default from JSON file
+  return PlaceHolderImages.find((img) => img.id === 'login-background')!;
+}
+
+
+export async function updateLoginBackground(data: { imageUrl: string }) {
+  'use server';
+  try {
+    const configDocRef = doc(db, 'appConfig', 'loginBackground');
+    await updateDoc(configDocRef, { imageUrl: data.imageUrl });
+    revalidatePath('/');
+    return { success: true, message: 'Login background updated successfully!' };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { success: false, message: `Failed to update: ${errorMessage}` };
+  }
+}
+
+
 // Action to pre-populate Firebase with initial data for demonstration purposes
 export async function seedInitialData() {
   'use server';
   try {
+    const batch = writeBatch(db);
+
     // Seed Juries
-    const juriesBatch = writeBatch(db);
     const juriesCollection = collection(db, 'juries');
     const juriesData = [
       { name: 'Panel 1', panelNo: 1 },
       { name: 'Panel 2', panelNo: 2 },
       { name: 'Panel 3', panelNo: 3 },
     ];
-    // Check if juries exist
     const juriesSnapshot = await getDocs(juriesCollection);
     if (juriesSnapshot.empty) {
       juriesData.forEach((jury) => {
         const docRef = doc(juriesCollection, `jury-${jury.panelNo}`);
-        juriesBatch.set(docRef, jury);
+        batch.set(docRef, jury);
       });
-      await juriesBatch.commit();
-      console.log('Juries seeded.');
-    } else {
-      console.log('Juries collection not empty, skipping seed.');
     }
 
     // Seed Teams
-    const teamsBatch = writeBatch(db);
     const teamsCollection = collection(db, 'teams');
     const teamsData = [
       { teamName: 'ByteBlaze', projectName: 'AI Health Tracker' },
@@ -168,19 +195,26 @@ export async function seedInitialData() {
       { teamName: 'QuantumLeap', projectName: 'Decentralized Social Network' },
       { teamName: 'InnovateAI', projectName: 'Real-time Translation Earbuds' },
     ];
-    // Check if teams exist
     const teamsSnapshot = await getDocs(teamsCollection);
     if (teamsSnapshot.empty) {
       teamsData.forEach((team) => {
         const docRef = doc(teamsCollection);
-        teamsBatch.set(docRef, team);
+        batch.set(docRef, team);
       });
-      await teamsBatch.commit();
-      console.log('Teams seeded.');
-    } else {
-      console.log('Teams collection not empty, skipping seed.');
+    }
+
+    // Seed App Config
+    const loginBgConfigRef = doc(db, 'appConfig', 'loginBackground');
+    const loginBgConfigSnap = await getDoc(loginBgConfigRef);
+    if (!loginBgConfigSnap.exists()) {
+      const defaultBg = PlaceHolderImages.find((img) => img.id === 'login-background');
+      if (defaultBg) {
+        batch.set(loginBgConfigRef, defaultBg);
+      }
     }
     
+    await batch.commit();
+
     revalidatePath('/');
     revalidatePath('/admin');
     return { success: true, message: "Initial data check/seed complete." };

@@ -1,15 +1,14 @@
+
 import Image from 'next/image';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { JuryLogin } from '@/components/auth/JuryLogin';
 import { AdminLogin } from '@/components/auth/AdminLogin';
 import { AppLogo } from '@/components/layout/AppLogo';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { getLoginBackground } from '@/lib/actions';
 
-export default function LoginPage() {
-  const backgroundImage = PlaceHolderImages.find(
-    (img) => img.id === 'login-background'
-  );
+export default async function LoginPage() {
+  const backgroundImage = await getLoginBackground();
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
@@ -20,6 +19,7 @@ export default function LoginPage() {
           fill
           className="object-cover -z-10 opacity-20"
           data-ai-hint={backgroundImage.imageHint}
+          priority
         />
       )}
       <div className="absolute top-6 left-6">

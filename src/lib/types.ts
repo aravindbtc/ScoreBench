@@ -1,3 +1,4 @@
+
 export interface Team {
   id: string;
   teamName: string;
@@ -32,3 +33,10 @@ export interface TeamScores {
 export interface CombinedScoreData extends Team {
   scores: TeamScores;
 }
+
+export type ImagePlaceholder = {
+  id: string;
+  description: string;
+  imageUrl: string;
+  imageHint: string;
+};
