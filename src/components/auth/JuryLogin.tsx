@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInAnonymously } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
@@ -28,7 +28,7 @@ export function JuryLogin() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const juriesQuery = collection(db, 'juries');
+  const juriesQuery = useMemo(() => collection(db, 'juries'), []);
   const { data: juries, status } = useFirestoreQuery<Jury>(juriesQuery);
 
   const handleLogin = async () => {
