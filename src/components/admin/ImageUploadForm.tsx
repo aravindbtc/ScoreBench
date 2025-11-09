@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -12,7 +13,8 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Loader2, Copy } from 'lucide-react';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
-import { Card, CardContent } from '../ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '../ui/card';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 const fileSchema = z.object({
   imageFile: z
@@ -58,14 +60,21 @@ export function ImageUploadForm() {
     }
   };
   
-  const handleCopy = () => {
-    if (!downloadURL) return;
-    navigator.clipboard.writeText(downloadURL);
+  const handleCopy = (textToCopy: string) => {
+    if (!textToCopy) return;
+    navigator.clipboard.writeText(textToCopy);
     toast({
         title: 'Copied!',
-        description: 'The image URL has been copied to your clipboard.'
+        description: 'The content has been copied to your clipboard.'
     });
   }
+
+  const jsonSnippet = `{
+  "id": "login-background",
+  "description": "The official poster for the Silver Spark 2025 Ideathon.",
+  "imageUrl": "${downloadURL}",
+  "imageHint": "ideathon event poster"
+}`;
 
   return (
     <div className="space-y-6">
@@ -99,18 +108,30 @@ export function ImageUploadForm() {
 
       {downloadURL && (
         <Card>
-            <CardContent className="pt-6">
-                <Label>Image URL</Label>
-                <div className="flex items-center gap-2 mt-2">
-                    <Input readOnly value={downloadURL} className="bg-muted" />
-                    <Button variant="outline" size="icon" onClick={handleCopy}>
-                        <Copy className="h-4 w-4" />
-                    </Button>
-                </div>
-                 <p className="text-sm text-muted-foreground mt-2">
-                    Copy this URL and use it in your application (e.g., in `src/lib/placeholder-images.json`).
-                </p>
-            </CardContent>
+          <CardHeader>
+            <CardDescription>
+              Your image has been uploaded successfully. Use the information below to update the login screen background.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>1. Copy the new configuration</Label>
+              <div className="relative mt-2">
+                <pre className="text-xs p-4 bg-muted rounded-md border overflow-x-auto">
+                  <code>{jsonSnippet}</code>
+                </pre>
+                <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => handleCopy(jsonSnippet)}>
+                    <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+             <Alert>
+              <AlertTitle>2. Update the file</AlertTitle>
+              <AlertDescription>
+                Open the file <code className="font-semibold text-foreground">src/lib/placeholder-images.json</code>, and replace the existing `login-background` object with the code you just copied.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
         </Card>
       )}
     </div>
