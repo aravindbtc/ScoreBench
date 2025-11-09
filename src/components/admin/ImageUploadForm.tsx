@@ -68,8 +68,6 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
             description: 'Image URL has been pasted into the form below.',
           });
           form.reset();
-          setIsUploading(false);
-          setUploadProgress(0);
         }).catch((error) => {
              console.error("Failed to get download URL", error);
              toast({
@@ -77,8 +75,9 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
                 description: 'Could not get the image URL after upload.',
                 variant: 'destructive',
              });
-             setIsUploading(false);
-             setUploadProgress(0);
+        }).finally(() => {
+            setIsUploading(false);
+            setUploadProgress(0);
         });
       }
     );
