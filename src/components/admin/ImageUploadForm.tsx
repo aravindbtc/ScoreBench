@@ -11,8 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
+import { Progress } from '../ui/progress';
 
 const fileSchema = z.object({
   imageFile: z
@@ -27,6 +28,7 @@ interface ImageUploadFormProps {
 
 export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
 
   const form = useForm<{ imageFile: FileList }>({
@@ -35,57 +37,77 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
 
   const onSubmit = async (data: { imageFile: FileList }) => {
     setIsUploading(true);
+    setUploadProgress(0);
     const file = data.imageFile[0];
     const storageRef = ref(storage, `uploads/${Date.now()}-${file.name}`);
 
-    try {
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
-      onUploadComplete(url);
-      toast({
-        title: 'Upload Successful',
-        description: 'Image URL has been pasted into the form below.',
-      });
-      form.reset();
-    } catch (error) {
-      console.error("Upload failed", error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      toast({
-        title: 'Upload Failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUploading(false);
-    }
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      },
+      (error) => {
+        console.error("Upload failed", error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        toast({
+          title: 'Upload Failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        setIsUploading(false);
+        setUploadProgress(0);
+      },
+      async () => {
+        const url = await getDownloadURL(uploadTask.snapshot.ref);
+        onUploadComplete(url);
+        toast({
+          title: 'Upload Successful',
+          description: 'Image URL has been pasted into the form below.',
+        });
+        form.reset();
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
+    );
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-end gap-4">
-        <FormField
-          control={form.control}
-          name="imageFile"
-          render={({ field }) => (
-            <FormItem className="flex-grow">
-              <Label htmlFor="imageFile">Upload a New Image</Label>
-              <FormControl>
-                <Input
-                  id="imageFile"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => field.onChange(e.target.files)}
-                  disabled={isUploading}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" disabled={isUploading}>
-          {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Upload
-        </Button>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="flex items-end gap-4">
+          <FormField
+            control={form.control}
+            name="imageFile"
+            render={({ field }) => (
+              <FormItem className="flex-grow">
+                <Label htmlFor="imageFile">Upload a New Image</Label>
+                <FormControl>
+                  <Input
+                    id="imageFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => field.onChange(e.target.files)}
+                    disabled={isUploading}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" disabled={isUploading}>
+            {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Upload
+          </Button>
+        </div>
+        {isUploading && (
+          <div className="space-y-2">
+            <Label>Upload Progress</Label>
+            <Progress value={uploadProgress} />
+          </div>
+        )}
       </form>
     </Form>
   );
