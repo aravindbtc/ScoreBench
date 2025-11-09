@@ -2,9 +2,9 @@
   "placeholderImages": [
     {
       "id": "login-background",
-      "description": "A dynamic and professional background for the Silver Spark 2025 Ideathon login page.",
-      "imageUrl": "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxpZGVhdGhvbiUyMGV2ZW50fGVufDB8fHx8MTcyMjAwOTYwOHww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "ideathon event"
+      "description": "The official poster for the Silver Spark 2025 Ideathon.",
+      "imageUrl": "/silver-spark-2025-poster.jpg",
+      "imageHint": "ideathon event poster"
     }
   ]
 }
