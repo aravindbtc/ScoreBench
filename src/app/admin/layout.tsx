@@ -1,7 +1,7 @@
 import { AdminAuth } from '@/components/auth/AdminAuth';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { NavLink } from '@/components/layout/NavLink';
-import { BarChart, Upload } from 'lucide-react';
+import { BarChart, ImageUp, Upload } from 'lucide-react';
 
 export default function AdminLayout({
   children,
@@ -23,6 +23,10 @@ export default function AdminLayout({
               <NavLink href="/admin/upload">
                 <Upload className="mr-2 h-4 w-4" />
                 Upload Teams
+              </NavLink>
+              <NavLink href="/admin/upload-image">
+                <ImageUp className="mr-2 h-4 w-4" />
+                Upload Image
               </NavLink>
             </nav>
           </aside>
