@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { onSnapshot, Query } from 'firebase/firestore';
+import { isEqual } from 'lodash';
 
 type QueryStatus = 'loading' | 'success' | 'error';
 
@@ -19,7 +20,15 @@ export function useFirestoreQuery<T>(query: Query) {
         querySnapshot.forEach((doc) => {
           results.push({ id: doc.id, ...doc.data() } as T);
         });
-        setData(results);
+
+        // Prevent re-render if data is the same
+        setData(prevData => {
+          if (isEqual(prevData, results)) {
+            return prevData;
+          }
+          return results;
+        });
+
         setStatus('success');
       },
       (err) => {
