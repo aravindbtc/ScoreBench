@@ -1,26 +1,15 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useState, useRef, type ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { Progress } from '../ui/progress';
-
-const fileSchema = z.object({
-  imageFile: z
-    .any()
-    .refine((files) => files?.length === 1, 'Image file is required.')
-    .refine((files) => files?.[0]?.type.startsWith('image/'), 'Must be an image file.'),
-});
 
 interface ImageUploadFormProps {
   onUploadComplete: (url: string) => void;
@@ -29,22 +18,43 @@ interface ImageUploadFormProps {
 export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const { toast } = useToast();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { toast } = useToast();
 
-  const form = useForm<{ imageFile: FileList }>({
-    resolver: zodResolver(fileSchema),
-  });
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      setSelectedFile(event.target.files[0]);
+    } else {
+      setSelectedFile(null);
+    }
+  };
 
-  const onSubmit = (data: { imageFile: FileList }) => {
-    const file = data.imageFile[0];
-    if (!file) return;
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedFile) {
+      toast({
+        title: 'No file selected',
+        description: 'Please select an image file to upload.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (!selectedFile.type.startsWith('image/')) {
+       toast({
+        title: 'Invalid file type',
+        description: 'Please select an image file.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsUploading(true);
     setUploadProgress(0);
 
-    const storageRef = ref(storage, `uploads/${Date.now()}-${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const storageRef = ref(storage, `uploads/${Date.now()}-${selectedFile.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, selectedFile);
 
     uploadTask.on(
       'state_changed',
@@ -53,7 +63,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
         setUploadProgress(progress);
       },
       (error) => {
-        console.error("Upload failed", error);
+        console.error('Upload failed', error);
         toast({
           title: 'Upload Failed',
           description: error.message || 'An unknown error occurred during upload.',
@@ -61,6 +71,10 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
         });
         setIsUploading(false);
         setUploadProgress(0);
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       },
       () => {
         getDownloadURL(uploadTask.snapshot.ref)
@@ -70,13 +84,9 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
               title: 'Upload Successful',
               description: 'Image URL has been pasted into the form below.',
             });
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-            form.reset({ imageFile: undefined });
           })
           .catch((error) => {
-            console.error("Failed to get download URL", error);
+            console.error('Failed to get download URL', error);
             toast({
               title: 'Upload Processing Failed',
               description: 'Could not get the image URL after upload.',
@@ -86,50 +96,40 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
           .finally(() => {
             setIsUploading(false);
             setUploadProgress(0);
+            setSelectedFile(null);
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
           });
       }
     );
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="flex items-end gap-4">
-          <FormField
-            control={form.control}
-            name="imageFile"
-            render={({ field: { onChange, value, ...rest } }) => (
-              <FormItem className="flex-grow">
-                <Label htmlFor="imageFile">Upload a New Image</Label>
-                <FormControl>
-                  <Input
-                    id="imageFile"
-                    type="file"
-                    accept="image/*"
-                    ref={(e) => {
-                      rest.ref(e);
-                      fileInputRef.current = e;
-                    }}
-                    onChange={(e) => onChange(e.target.files)}
-                    disabled={isUploading}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex items-end gap-4">
+        <div className="flex-grow space-y-2">
+           <Label htmlFor="imageFile">Upload a New Image</Label>
+           <Input
+            id="imageFile"
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            disabled={isUploading}
           />
-          <Button type="submit" disabled={isUploading || !form.formState.isValid}>
-            {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Upload
-          </Button>
         </div>
-        {isUploading && (
-          <div className="space-y-2">
-            <Label>Upload Progress</Label>
-            <Progress value={uploadProgress} />
-          </div>
-        )}
-      </form>
-    </Form>
+        <Button type="submit" disabled={isUploading || !selectedFile}>
+          {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Upload
+        </Button>
+      </div>
+      {isUploading && (
+        <div className="space-y-2">
+          <Label>Upload Progress</Label>
+          <Progress value={uploadProgress} />
+        </div>
+      )}
+    </form>
   );
 }
