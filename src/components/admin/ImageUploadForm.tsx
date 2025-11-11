@@ -18,32 +18,35 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
-      setSelectedFile(event.target.files[0]);
+      const file = event.target.files[0];
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: 'Invalid file type',
+          description: 'Please select an image file.',
+          variant: 'destructive',
+        });
+        setSelectedFile(null);
+        if(fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+      setSelectedFile(file);
     } else {
       setSelectedFile(null);
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleUpload = () => {
     if (!selectedFile) {
       toast({
         title: 'No file selected',
         description: 'Please select an image file to upload.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (!selectedFile.type.startsWith('image/')) {
-       toast({
-        title: 'Invalid file type',
-        description: 'Please select an image file.',
         variant: 'destructive',
       });
       return;
@@ -63,18 +66,14 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
         setUploadProgress(progress);
       },
       (error) => {
-        console.error('Upload failed', error);
+        console.error('Upload failed with error:', error);
         toast({
           title: 'Upload Failed',
-          description: error.message || 'An unknown error occurred during upload. Check console for details.',
+          description: `An error occurred: ${error.code} - ${error.message}. Check the console for details.`,
           variant: 'destructive',
         });
         setIsUploading(false);
         setUploadProgress(0);
-        setSelectedFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
       },
       () => {
         console.log('Upload complete. Getting download URL...');
@@ -90,13 +89,13 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
           .catch((error) => {
             console.error('Failed to get download URL', error);
             toast({
-              title: 'Upload Processing Failed',
+              title: 'Processing Failed',
               description: 'Could not get the image URL after upload. Check console for details.',
               variant: 'destructive',
             });
           })
           .finally(() => {
-            console.log('Resetting upload state.');
+            console.log('Resetting component state.');
             setIsUploading(false);
             setUploadProgress(0);
             setSelectedFile(null);
@@ -109,7 +108,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-4">
       <div className="flex items-end gap-4">
         <div className="flex-grow space-y-2">
            <Label htmlFor="imageFile">Upload a New Image</Label>
@@ -122,7 +121,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
             disabled={isUploading}
           />
         </div>
-        <Button type="submit" disabled={isUploading || !selectedFile}>
+        <Button onClick={handleUpload} disabled={isUploading || !selectedFile}>
           {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Upload
         </Button>
@@ -133,6 +132,6 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
           <Progress value={uploadProgress} />
         </div>
       )}
-    </form>
+    </div>
   );
 }
