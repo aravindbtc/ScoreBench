@@ -60,13 +60,14 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
       'state_changed',
       (snapshot) => {
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log(`Upload is ${progress}% done`);
         setUploadProgress(progress);
       },
       (error) => {
         console.error('Upload failed', error);
         toast({
           title: 'Upload Failed',
-          description: error.message || 'An unknown error occurred during upload.',
+          description: error.message || 'An unknown error occurred during upload. Check console for details.',
           variant: 'destructive',
         });
         setIsUploading(false);
@@ -77,8 +78,10 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
         }
       },
       () => {
+        console.log('Upload complete. Getting download URL...');
         getDownloadURL(uploadTask.snapshot.ref)
           .then((downloadURL) => {
+            console.log('Successfully got download URL:', downloadURL);
             onUploadComplete(downloadURL);
             toast({
               title: 'Upload Successful',
@@ -89,11 +92,12 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
             console.error('Failed to get download URL', error);
             toast({
               title: 'Upload Processing Failed',
-              description: 'Could not get the image URL after upload.',
+              description: 'Could not get the image URL after upload. Check console for details.',
               variant: 'destructive',
             });
           })
           .finally(() => {
+            console.log('Resetting upload state.');
             setIsUploading(false);
             setUploadProgress(0);
             setSelectedFile(null);
