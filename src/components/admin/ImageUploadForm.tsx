@@ -117,7 +117,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
             id="imageFile"
             type="file"
             accept="image/*"
-            ref={fileInput_ref}
+            ref={fileInputRef}
             onChange={handleFileChange}
             disabled={isUploading}
           />
