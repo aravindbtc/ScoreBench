@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, type ChangeEvent } from 'react';
@@ -118,7 +117,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
             id="imageFile"
             type="file"
             accept="image/*"
-            ref={fileInputRef}
+            ref={fileInput_ref}
             onChange={handleFileChange}
             disabled={isUploading}
           />
