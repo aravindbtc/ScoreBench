@@ -36,10 +36,11 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
   });
 
   const onSubmit = (data: { imageFile: FileList }) => {
-    setIsUploading(true);
-    setUploadProgress(0);
     const file = data.imageFile[0];
     if (!file) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
 
     const storageRef = ref(storage, `uploads/${Date.now()}-${file.name}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
@@ -61,24 +62,29 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
         setUploadProgress(0);
       },
       () => {
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          onUploadComplete(downloadURL);
-          toast({
-            title: 'Upload Successful',
-            description: 'Image URL has been pasted into the form below.',
-          });
-          form.reset();
-        }).catch((error) => {
-             console.error("Failed to get download URL", error);
-             toast({
-                title: 'Upload Failed',
-                description: 'Could not get the image URL after upload.',
-                variant: 'destructive',
-             });
-        }).finally(() => {
+        // This block runs when the upload is complete.
+        getDownloadURL(uploadTask.snapshot.ref)
+          .then((downloadURL) => {
+            onUploadComplete(downloadURL);
+            toast({
+              title: 'Upload Successful',
+              description: 'Image URL has been pasted into the form below.',
+            });
+            form.reset();
+          })
+          .catch((error) => {
+            console.error("Failed to get download URL", error);
+            toast({
+              title: 'Upload Processing Failed',
+              description: 'Could not get the image URL after upload.',
+              variant: 'destructive',
+            });
+          })
+          .finally(() => {
+            // This will run regardless of success or failure in getting the URL.
             setIsUploading(false);
             setUploadProgress(0);
-        });
+          });
       }
     );
   };
