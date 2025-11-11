@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,6 +30,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<{ imageFile: FileList }>({
     resolver: zodResolver(fileSchema),
@@ -68,7 +70,10 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
               title: 'Upload Successful',
               description: 'Image URL has been pasted into the form below.',
             });
-            form.reset();
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+            form.reset({ imageFile: undefined });
           })
           .catch((error) => {
             console.error("Failed to get download URL", error);
@@ -93,7 +98,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
           <FormField
             control={form.control}
             name="imageFile"
-            render={({ field }) => (
+            render={({ field: { onChange, value, ...rest } }) => (
               <FormItem className="flex-grow">
                 <Label htmlFor="imageFile">Upload a New Image</Label>
                 <FormControl>
@@ -101,7 +106,11 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
                     id="imageFile"
                     type="file"
                     accept="image/*"
-                    onChange={(e) => field.onChange(e.target.files)}
+                    ref={(e) => {
+                      rest.ref(e);
+                      fileInputRef.current = e;
+                    }}
+                    onChange={(e) => onChange(e.target.files)}
                     disabled={isUploading}
                   />
                 </FormControl>
@@ -109,7 +118,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
               </FormItem>
             )}
           />
-          <Button type="submit" disabled={isUploading}>
+          <Button type="submit" disabled={isUploading || !form.formState.isValid}>
             {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Upload
           </Button>
