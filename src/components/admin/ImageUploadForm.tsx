@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -62,7 +61,6 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
         setUploadProgress(0);
       },
       () => {
-        // This block runs when the upload is complete.
         getDownloadURL(uploadTask.snapshot.ref)
           .then((downloadURL) => {
             onUploadComplete(downloadURL);
@@ -81,7 +79,6 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
             });
           })
           .finally(() => {
-            // This will run regardless of success or failure in getting the URL.
             setIsUploading(false);
             setUploadProgress(0);
           });
