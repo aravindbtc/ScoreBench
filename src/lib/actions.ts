@@ -1,4 +1,3 @@
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -16,7 +15,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Team, Score, ImagePlaceholder } from './types';
+import type { Team, Score, ImagePlaceholder, Jury } from './types';
 import { PlaceHolderImages } from './placeholder-images';
 
 export async function verifyAdminPassword(password: string) {
@@ -25,6 +24,42 @@ export async function verifyAdminPassword(password: string) {
     return { success: true };
   }
   return { success: false, message: 'Incorrect password.' };
+}
+
+export async function addJury(jury: Omit<Jury, 'id'>) {
+  'use server';
+  try {
+    const juriesCollection = collection(db, 'juries');
+    // Check if panel number already exists
+    const q = query(juriesCollection, where('panelNo', '==', jury.panelNo));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      return { success: false, message: `Panel number ${jury.panelNo} already exists.` };
+    }
+    await addDoc(juriesCollection, jury);
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true, message: `Jury "${jury.name}" added successfully.` };
+  } catch (error) {
+    console.error('Error adding jury:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { success: false, message: `Failed to add jury: ${errorMessage}` };
+  }
+}
+
+export async function deleteJury(juryId: string) {
+  'use server';
+  try {
+    const juryDocRef = doc(db, 'juries', juryId);
+    await deleteDoc(juryDocRef);
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true, message: 'Jury deleted successfully.' };
+  } catch (error) {
+    console.error('Error deleting jury:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return { success: false, message: `Failed to delete jury: ${errorMessage}` };
+  }
 }
 
 export async function addTeam(team: Omit<Team, 'id'>) {
@@ -182,7 +217,7 @@ export async function seedInitialData() {
     const juriesSnapshot = await getDocs(juriesCollection);
     if (juriesSnapshot.empty) {
       juriesData.forEach((jury) => {
-        const docRef = doc(juriesCollection, `jury-${jury.panelNo}`);
+        const docRef = doc(juriesCollection);
         batch.set(docRef, jury);
       });
     }

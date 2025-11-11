@@ -33,7 +33,7 @@ export function TeamManagement({ teams, onDeleteRequest }: TeamManagementProps) 
       <CardHeader>
         <CardTitle>Manage Teams</CardTitle>
         <CardDescription>
-          Here you can view and delete existing teams.
+          Here you can view and delete existing teams. Team scores are managed on the Leaderboard tab.
         </CardDescription>
       </CardHeader>
       <Table>

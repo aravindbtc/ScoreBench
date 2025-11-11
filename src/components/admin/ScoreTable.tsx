@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/accordion';
 import type { CombinedScoreData, Score } from '@/lib/types';
 import { Badge } from '../ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -65,7 +65,7 @@ export function ScoreTable({ data, onDeleteRequest }: ScoreTableProps) {
     return (
       <Card className="text-center p-8">
         <h3 className="text-lg font-semibold">No Teams Found</h3>
-        <p className="text-muted-foreground">Upload teams or add a new one to get started.</p>
+        <p className="text-muted-foreground">Add or upload teams via the Team Management tab.</p>
       </Card>
     );
   }

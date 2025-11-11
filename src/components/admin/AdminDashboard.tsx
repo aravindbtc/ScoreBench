@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useFirestoreQuery } from '@/hooks/use-firestore-query';
 import { collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Team, TeamScores, CombinedScoreData } from '@/lib/types';
+import type { Team, TeamScores, CombinedScoreData, Jury } from '@/lib/types';
 import { ScoreTable } from './ScoreTable';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2, PlusCircle, Trash2, UserPlus, Users } from 'lucide-react';
@@ -20,14 +20,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { deleteTeam } from '@/lib/actions';
+import { deleteTeam, deleteJury } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamManagement } from './TeamManagement';
+import { JuryManagement } from './JuryManagement';
+import { AddJuryDialog } from './AddJuryDialog';
 
 export function AdminDashboard() {
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
-  const [teamToDelete, setTeamToDelete] = useState<CombinedScoreData | null>(null);
+  const [isAddJuryOpen, setIsAddJuryOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{type: 'team' | 'jury', data: any} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
@@ -36,6 +39,9 @@ export function AdminDashboard() {
 
   const scoresQuery = useMemo(() => collection(db, 'scores'), []);
   const { data: scores, status: scoresStatus } = useFirestoreQuery<TeamScores>(scoresQuery);
+
+  const juriesQuery = useMemo(() => collection(db, 'juries'), []);
+  const { data: juries, status: juriesStatus } = useFirestoreQuery<Jury>(juriesQuery);
 
   const combinedData: CombinedScoreData[] = useMemo(() => {
     if (!teams || !scores) return [];
@@ -70,27 +76,34 @@ export function AdminDashboard() {
     XLSX.writeFile(workbook, 'HackEval_Scores.xlsx');
   };
 
-  const handleDeleteTeam = async () => {
-    if (!teamToDelete) return;
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
     setIsDeleting(true);
-    const result = await deleteTeam(teamToDelete.id);
+    
+    let result;
+    if (itemToDelete.type === 'team') {
+      result = await deleteTeam(itemToDelete.data.id);
+    } else {
+      result = await deleteJury(itemToDelete.data.id);
+    }
+    
     if (result.success) {
       toast({
-        title: 'Team Deleted',
-        description: `Team "${teamToDelete.teamName}" has been successfully deleted.`,
+        title: `${itemToDelete.type.charAt(0).toUpperCase() + itemToDelete.type.slice(1)} Deleted`,
+        description: result.message,
       });
     } else {
       toast({
-        title: 'Error Deleting Team',
+        title: `Error Deleting ${itemToDelete.type}`,
         description: result.message,
         variant: 'destructive',
       });
     }
     setIsDeleting(false);
-    setTeamToDelete(null);
+    setItemToDelete(null);
   };
 
-  const isLoading = teamsStatus === 'loading' || scoresStatus === 'loading';
+  const isLoading = teamsStatus === 'loading' || scoresStatus === 'loading' || juriesStatus === 'loading';
 
   return (
     <div className="space-y-4">
@@ -99,12 +112,9 @@ export function AdminDashboard() {
           <TabsList>
             <TabsTrigger value="scores">Leaderboard</TabsTrigger>
             <TabsTrigger value="teams">Team Management</TabsTrigger>
+            <TabsTrigger value="juries">Jury Management</TabsTrigger>
           </TabsList>
            <div className="flex flex-wrap gap-2">
-            <Button onClick={() => setIsAddTeamOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Team
-            </Button>
             <Button onClick={handleExport} variant="outline" disabled={isLoading || !combinedData.length}>
               <Download className="mr-2 h-4 w-4" />
               Export Scores
@@ -118,35 +128,61 @@ export function AdminDashboard() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <ScoreTable data={combinedData} onDeleteRequest={setTeamToDelete} />
+            <ScoreTable data={combinedData} onDeleteRequest={(team) => setItemToDelete({type: 'team', data: team})} />
           )}
         </TabsContent>
         <TabsContent value="teams" className="mt-4">
-           {isLoading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center p-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <TeamManagement teams={teams || []} onDeleteRequest={(team) => setTeamToDelete(team as CombinedScoreData)} />
+            <>
+              <div className="text-right mb-4">
+                <Button onClick={() => setIsAddTeamOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Team
+                </Button>
+              </div>
+              <TeamManagement teams={teams || []} onDeleteRequest={(team) => setItemToDelete({type: 'team', data: team as CombinedScoreData})} />
+            </>
+          )}
+        </TabsContent>
+         <TabsContent value="juries" className="mt-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <>
+              <div className="text-right mb-4">
+                <Button onClick={() => setIsAddJuryOpen(true)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Add Jury
+                </Button>
+              </div>
+              <JuryManagement juries={juries || []} onDeleteRequest={(jury) => setItemToDelete({type: 'jury', data: jury})} />
+            </>
           )}
         </TabsContent>
       </Tabs>
       
       <AddTeamDialog isOpen={isAddTeamOpen} onOpenChange={setIsAddTeamOpen} />
+      <AddJuryDialog isOpen={isAddJuryOpen} onOpenChange={setIsAddJuryOpen} />
 
-      <AlertDialog open={!!teamToDelete} onOpenChange={(open) => !open && setTeamToDelete(null)}>
+      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the team
-              <strong className="text-foreground"> {teamToDelete?.teamName} </strong>
-              and all associated scoring data.
+              This action cannot be undone. This will permanently delete the {itemToDelete?.type}
+              <strong className="text-foreground"> {itemToDelete?.data?.teamName || itemToDelete?.data?.name} </strong>
+              {itemToDelete?.type === 'team' && 'and all associated scoring data.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteTeam} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
             </AlertDialogAction>
