@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+import ImageKit from 'imagekit-javascript';
 
 interface ImageUploadFormProps {
   onUploadComplete: (url: string) => void;
@@ -50,51 +49,62 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
     setIsUploading(true);
     setProgress(0);
 
-    const fileName = `login-backgrounds/${Date.now()}-${selectedFile.name}`;
-    const fileRef = storageRef(storage, fileName);
-
-    const uploadTask = uploadBytesResumable(fileRef, selectedFile);
-
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const currentProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setProgress(currentProgress);
-        console.log(`Upload is ${currentProgress}% done`);
-      },
-      (error) => {
-        console.error('Upload failed:', error);
-        let errorMessage = 'An unknown error occurred.';
-        switch (error.code) {
-            case 'storage/unauthorized':
-                errorMessage = "Permission denied. Please check your Firebase Storage security rules.";
-                break;
-            case 'storage/canceled':
-                errorMessage = "Upload was canceled.";
-                break;
-            case 'storage/unknown':
-                errorMessage = "An unknown error occurred, possibly a CORS issue. Please check your bucket's CORS configuration.";
-                break;
-        }
-        toast({
-          title: 'Upload Failed',
-          description: errorMessage,
-          variant: 'destructive',
-        });
-        setIsUploading(false);
-      },
-      () => {
-        console.log('Upload complete');
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          onUploadComplete(downloadURL);
-          setIsUploading(false);
-          setSelectedFile(null);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-        });
+    try {
+      // 1. Fetch authentication parameters from our server
+      const authRes = await fetch('/api/imagekit-auth');
+      if (!authRes.ok) {
+        throw new Error('Failed to get upload credentials. Is your server running and are environment variables set?');
       }
-    );
+      const authParams = await authRes.json();
+      
+      const imagekit = new ImageKit({
+        urlEndpoint: authParams.urlEndpoint,
+        publicKey: authParams.publicKey,
+        authenticationEndpoint: '/api/imagekit-auth'
+      });
+
+      // 2. Upload the file to ImageKit
+      imagekit.upload({
+        file: selectedFile,
+        fileName: selectedFile.name,
+        token: authParams.token,
+        signature: authParams.signature,
+        expire: authParams.expire,
+        useUniqueFileName: true,
+      }, (err, result) => {
+        if (err) {
+          console.error("ImageKit upload failed:", err);
+          toast({
+            title: 'Upload Failed',
+            description: 'Could not upload the image. Check the console for details.',
+            variant: 'destructive',
+          });
+          setIsUploading(false);
+          return;
+        }
+
+        console.log("ImageKit upload successful:", result);
+        if (result) {
+          onUploadComplete(result.url);
+        }
+        
+        setIsUploading(false);
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      });
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+      console.error('Upload process failed:', error);
+      toast({
+        title: 'Upload Failed',
+        description: message,
+        variant: 'destructive',
+      });
+      setIsUploading(false);
+    }
   };
 
   return (
