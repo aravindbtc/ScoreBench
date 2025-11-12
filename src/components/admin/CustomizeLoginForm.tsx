@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,11 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import { ImageUploadForm } from './ImageUploadForm';
-import { ImagePlaceholder } from '@/lib/types';
 import NextImage from 'next/image';
 import { updateLoginBackground, getLoginBackground } from '@/lib/actions';
-import { Separator } from '../ui/separator';
 import { Skeleton } from '../ui/skeleton';
 
 const urlSchema = z.object({
@@ -45,10 +41,6 @@ export function CustomizeLoginForm() {
     }
     fetchInitialBackground();
   }, [form]);
-
-  const handleUploadComplete = (url: string) => {
-    form.setValue('imageUrl', url, { shouldValidate: true });
-  };
   
   const onSubmit = async (data: { imageUrl: string }) => {
     setIsSaving(true);
@@ -71,31 +63,27 @@ export function CustomizeLoginForm() {
   const imageUrl = form.watch('imageUrl');
 
   if (isLoading) {
-    return <Skeleton className="h-[450px] w-full" />;
+    return <Skeleton className="h-[250px] w-full" />;
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-lg font-medium mb-4">Current Background</h3>
+        <h3 className="text-lg font-medium mb-4">Current Background Preview</h3>
         <div className="rounded-lg border overflow-hidden aspect-video relative max-h-64 bg-muted">
-            {imageUrl && (
+            {imageUrl ? (
                 <NextImage
                     src={imageUrl}
                     alt="Current login background"
                     fill
                     className="object-cover"
                 />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <p>No image URL set.</p>
+              </div>
             )}
         </div>
-      </div>
-
-      <ImageUploadForm onUploadComplete={handleUploadComplete} />
-      
-      <div className="flex items-center gap-4">
-        <Separator className="flex-1" />
-        <span className="text-xs text-muted-foreground">OR</span>
-        <Separator className="flex-1" />
       </div>
 
       <Form {...form}>
@@ -105,9 +93,9 @@ export function CustomizeLoginForm() {
             name="imageUrl"
             render={({ field }) => (
               <FormItem>
-                <Label htmlFor="imageUrl">Set Image URL Manually</Label>
+                <Label htmlFor="imageUrl">Login Page Background URL</Label>
                 <FormControl>
-                  <Input id="imageUrl" placeholder="https://example.com/image.jpg" {...field} />
+                  <Input id="imageUrl" placeholder="https://firebasestorage.googleapis.com/..." {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -115,7 +103,7 @@ export function CustomizeLoginForm() {
           />
           <Button type="submit" disabled={isSaving}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Background
+            Save Background URL
           </Button>
         </form>
       </Form>
