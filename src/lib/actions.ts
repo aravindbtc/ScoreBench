@@ -13,7 +13,6 @@ import {
   deleteDoc,
   query,
   where,
-  updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Team, Score, ImagePlaceholder, Jury } from './types';
@@ -194,7 +193,9 @@ export async function updateLoginBackground(data: { imageUrl: string }) {
   'use server';
   try {
     const configDocRef = doc(db, 'appConfig', 'loginBackground');
-    await updateDoc(configDocRef, { imageUrl: data.imageUrl });
+    // Using setDoc with merge: true will create the document if it doesn't exist,
+    // or update it if it does. This is more robust than updateDoc.
+    await setDoc(configDocRef, { imageUrl: data.imageUrl }, { merge: true });
     
     revalidatePath('/');
     revalidatePath('/admin/upload-image');
