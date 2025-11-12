@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import { updateLoginBackground } from '@/lib/actions';
+import { updateLoginBackground, getLoginBackground } from '@/lib/actions';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter } from 'next/navigation';
@@ -22,7 +22,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function CustomizeLoginForm({ currentImageUrl }: { currentImageUrl: string }) {
+export function CustomizeLoginForm() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -30,9 +30,17 @@ export function CustomizeLoginForm({ currentImageUrl }: { currentImageUrl: strin
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      imageUrl: currentImageUrl || '',
+      imageUrl: '',
     },
   });
+
+  useEffect(() => {
+    getLoginBackground().then(bg => {
+      if (bg?.imageUrl) {
+        form.setValue('imageUrl', bg.imageUrl);
+      }
+    });
+  }, [form]);
 
   const handleUploadComplete = (url: string) => {
     form.setValue('imageUrl', url, { shouldValidate: true });

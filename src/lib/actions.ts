@@ -16,7 +16,6 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { getAdminApp } from './firebase-admin';
 import type { Team, Score, ImagePlaceholder, Jury } from './types';
 import { PlaceHolderImages } from './placeholder-images';
 
@@ -175,13 +174,12 @@ export async function submitScore(
 }
 
 export async function getLoginBackground(): Promise<ImagePlaceholder> {
+  'use server';
   try {
-    // Use the Admin SDK for server-side fetches to bypass security rules
-    const adminDb = getAdminApp().firestore();
-    const configDocRef = adminDb.doc('appConfig/loginBackground');
-    const docSnap = await configDocRef.get();
+    const configDocRef = doc(db, 'appConfig', 'loginBackground');
+    const docSnap = await getDoc(configDocRef);
     
-    if (docSnap.exists) {
+    if (docSnap.exists()) {
       return docSnap.data() as ImagePlaceholder;
     }
   } catch (error) {
@@ -195,10 +193,8 @@ export async function getLoginBackground(): Promise<ImagePlaceholder> {
 export async function updateLoginBackground(data: { imageUrl: string }) {
   'use server';
   try {
-    // Use the Admin SDK for server-side writes
-    const adminDb = getAdminApp().firestore();
-    const configDocRef = adminDb.doc('appConfig/loginBackground');
-    await configDocRef.update({ imageUrl: data.imageUrl });
+    const configDocRef = doc(db, 'appConfig', 'loginBackground');
+    await updateDoc(configDocRef, { imageUrl: data.imageUrl });
     
     revalidatePath('/');
     revalidatePath('/admin/upload-image');
@@ -268,5 +264,3 @@ export async function seedInitialData() {
     return { success: false, message: "Failed to seed initial data." };
   }
 }
-
-    
