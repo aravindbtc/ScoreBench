@@ -14,24 +14,26 @@ import { Loader2 } from 'lucide-react';
 import { updateLoginBackground } from '@/lib/actions';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useRouter } from 'next/navigation';
 
 const urlSchema = z.object({
   imageUrl: z.string().url('Please enter a valid URL.'),
 });
 
-export function CustomizeLoginForm() {
+export function CustomizeLoginForm({ currentImageUrl }: { currentImageUrl: string }) {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const form = useForm<{ imageUrl: string }>({
     resolver: zodResolver(urlSchema),
     defaultValues: {
-      imageUrl: '',
+      imageUrl: currentImageUrl || '',
     },
   });
 
   const handleUploadComplete = (url: string) => {
-    form.setValue('imageUrl', url);
+    form.setValue('imageUrl', url, { shouldValidate: true });
     toast({
       title: 'Upload Complete!',
       description: "Image URL has been set. Click 'Save Background' to apply.",
@@ -46,6 +48,8 @@ export function CustomizeLoginForm() {
         title: 'Success!',
         description: 'The login background has been updated.',
       });
+      // Refresh the page to show the new current background
+      router.refresh();
     } else {
       toast({
         title: 'Error',
