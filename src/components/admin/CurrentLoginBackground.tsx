@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from "next/image";
 import { Skeleton } from '../ui/skeleton';
 import { Input } from '../ui/input';
@@ -9,27 +9,29 @@ import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { onSnapshot, doc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
+import { useDoc } from '@/firebase';
 import { db } from '@/lib/firebase';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import type { ImagePlaceholder } from '@/lib/types';
-import { useRouter } from 'next/navigation';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export function CurrentLoginBackground() {
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
     const { toast } = useToast();
-    const router = useRouter();
+
+    // Use a memoized reference for the useDoc hook
+    const loginBgConfigRef = useMemo(() => doc(db, 'appConfig', 'loginBackground'), []);
+    const { data, isLoading, error } = useDoc<{imageUrl: string}>(loginBgConfigRef);
+
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
 
     useEffect(() => {
-        // Since we are moving away from Firestore for this,
-        // we can just load the image from the local JSON file.
-        const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
-        setImageUrl(fallback?.imageUrl || null);
-        setLoading(false);
-    }, []);
+        if (data) {
+            setImageUrl(data.imageUrl);
+        } else if (!isLoading) {
+            // If there's no data from Firestore, use the local fallback
+            const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
+            setImageUrl(fallback?.imageUrl || null);
+        }
+    }, [data, isLoading]);
 
     const handleCopy = () => {
         if (imageUrl) {
@@ -41,14 +43,22 @@ export function CurrentLoginBackground() {
         }
     };
 
-    if (loading) {
+    if (isLoading) {
         return <Skeleton className="aspect-video w-full" />;
     }
 
+    if (error) {
+         return (
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg border flex items-center justify-center bg-destructive/10 text-destructive">
+                <p className="text-sm text-center p-4">Could not load current background. You may not have permission to view it.</p>
+            </div>
+        );
+    }
+    
     if (!imageUrl) {
         return (
             <div className="relative aspect-video w-full overflow-hidden rounded-lg border flex items-center justify-center bg-muted">
-                <p className="text-sm text-muted-foreground">Could not load image.</p>
+                <p className="text-sm text-muted-foreground">No background image is set.</p>
             </div>
         );
     }

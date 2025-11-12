@@ -13,8 +13,8 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Loader2 } from 'lucide-react';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { updateLoginBackground, getLoginBackground } from '@/lib/actions';
-import type { ImagePlaceholder } from '@/lib/types';
+import { updateLoginBackground } from '@/lib/actions';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const formSchema = z.object({
@@ -25,8 +25,6 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function CustomizeLoginForm() {
   const [isSaving, setIsSaving] = useState(false);
-  const [initialBg, setInitialBg] = useState<ImagePlaceholder | null>(null);
-
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -37,12 +35,11 @@ export function CustomizeLoginForm() {
   });
 
   useEffect(() => {
-    getLoginBackground().then(bg => {
-        if (bg?.imageUrl) {
-            form.setValue('imageUrl', bg.imageUrl);
-            setInitialBg(bg);
-        }
-    });
+    // Set the initial value from the local placeholder file
+    const initialBg = PlaceHolderImages.find(p => p.id === 'login-background');
+    if (initialBg?.imageUrl) {
+        form.setValue('imageUrl', initialBg.imageUrl);
+    }
   }, [form]);
 
   const handleUploadComplete = (url: string) => {
@@ -68,7 +65,13 @@ export function CustomizeLoginForm() {
        if (result.success) {
         toast({
           title: 'Success!',
-          description: 'The login background has been updated.',
+          description: 'The login background has been updated. It may take a moment to reflect.',
+        });
+      } else {
+        toast({
+          title: 'Save Failed',
+          description: result.message || 'An unknown error occurred.',
+          variant: 'destructive',
         });
       }
     } catch (error) {

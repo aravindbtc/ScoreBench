@@ -7,10 +7,11 @@ import { AdminLogin } from '@/components/auth/AdminLogin';
 import { AppLogo } from '@/components/layout/AppLogo';
 import { LoginBackground } from '@/components/auth/LoginBackground';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getLoginBackground } from '@/lib/actions';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-export default async function LoginPage() {
-  const background = await getLoginBackground();
+export default function LoginPage() {
+  // Read the background image directly from the local file for stability.
+  const background = PlaceHolderImages.find((img) => img.id === 'login-background') || null;
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">

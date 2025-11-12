@@ -29,24 +29,30 @@ export async function verifyAdminPassword(password: string) {
 
 export async function updateLoginBackground(imageUrl: string) {
   'use server';
-  // This function is intentionally designed to throw an error on permission failure
-  // to provide a detailed error message in the Next.js overlay for debugging.
-  const configDocRef = doc(db, 'appConfig', 'loginBackground');
-  await setDoc(configDocRef, { imageUrl }, { merge: true });
-
-  // This part will only be reached if the setDoc is successful.
-  revalidatePath('/');
-  revalidatePath('/admin/upload-image');
-  return { success: true, message: 'Background updated successfully.' };
+  try {
+    const configDocRef = doc(db, 'appConfig', 'loginBackground');
+    await setDoc(configDocRef, { imageUrl }, { merge: true });
+    
+    // Revalidate paths to ensure the new background is fetched on next load
+    revalidatePath('/admin/upload-image');
+    revalidatePath('/');
+    
+    return { success: true, message: 'Background updated successfully.' };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "An unknown error occurred while updating the background.";
+    return { success: false, message };
+  }
 }
 
+// This function is no longer needed as we fetch from local file on page.tsx
+// It is kept here for potential future use or reference but is not called on the main page.
 export async function getLoginBackground(): Promise<ImagePlaceholder | null> {
+  'use server';
   try {
     const loginBgConfigRef = doc(db, 'appConfig', 'loginBackground');
     const docSnap = await getDoc(loginBgConfigRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
-      // Ensure the fetched data matches the ImagePlaceholder structure
       if (data.imageUrl && typeof data.imageUrl === 'string') {
         const placeholder = PlaceHolderImages.find((img) => img.id === 'login-background') || {
           id: 'login-background',
@@ -59,11 +65,9 @@ export async function getLoginBackground(): Promise<ImagePlaceholder | null> {
         };
       }
     }
-    // Fallback to local placeholder if not in DB or data is malformed
     return PlaceHolderImages.find((img) => img.id === 'login-background') || null;
   } catch (error) {
     console.error("Error getting login background:", error);
-    // On error, always return the local fallback
     return PlaceHolderImages.find((img) => img.id === 'login-background') || null;
   }
 }
