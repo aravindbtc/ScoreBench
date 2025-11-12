@@ -18,8 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { addTeam } from '@/lib/actions';
 import { Loader2 } from 'lucide-react';
+import { addDocumentNonBlocking, useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 const teamSchema = z.object({
   teamName: z.string().min(2, 'Team name must be at least 2 characters.'),
@@ -36,6 +37,7 @@ interface AddTeamDialogProps {
 export function AddTeamDialog({ isOpen, onOpenChange }: AddTeamDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const form = useForm<TeamFormData>({
     resolver: zodResolver(teamSchema),
@@ -45,24 +47,19 @@ export function AddTeamDialog({ isOpen, onOpenChange }: AddTeamDialogProps) {
     },
   });
 
-  const onSubmit = async (data: TeamFormData) => {
+  const onSubmit = (data: TeamFormData) => {
     setIsSubmitting(true);
-    const result = await addTeam(data);
+    const teamsCollection = collection(firestore, 'teams');
+    
+    addDocumentNonBlocking(teamsCollection, data);
 
-    if (result.success) {
-      toast({
-        title: 'Team Added',
-        description: result.message,
-      });
-      form.reset();
-      onOpenChange(false);
-    } else {
-      toast({
-        title: 'Error',
-        description: result.message,
-        variant: 'destructive',
-      });
-    }
+    toast({
+      title: 'Team Added',
+      description: `Team "${data.teamName}" has been added.`,
+    });
+    
+    form.reset();
+    onOpenChange(false);
     setIsSubmitting(false);
   };
 

@@ -4,7 +4,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useEffect, useState } from 'react';
-
 import type { Team, TeamScores } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,9 +18,10 @@ import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { submitScore } from '@/lib/actions';
 import { generateTeamFeedback } from '@/ai/flows/generate-team-feedback';
 import { Wand2, Loader2 } from 'lucide-react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 const scoreSchema = z.object({
   innovation: z.number().min(1).max(10),
@@ -46,6 +46,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const isAlreadyScored = !!existingScores?.[`panel${juryPanel}` as keyof TeamScores];
 
@@ -102,21 +103,33 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
 
   async function onSubmit(data: ScoreFormData) {
     setIsSubmitting(true);
-    const scoreData = { ...data, total: totalScore };
+    try {
+      const scoreData = { ...data, total: totalScore };
+      const scoreDocRef = doc(firestore, 'scores', team.id);
+      const panelField = `panel${juryPanel}`;
 
-    const result = await submitScore(team.id, juryPanel, scoreData);
+      await setDoc(scoreDocRef, { [panelField]: scoreData }, { merge: true });
 
-    if (result.success) {
+      // Recalculate average
+      const updatedDocSnap = await getDoc(scoreDocRef);
+      if (updatedDocSnap.exists()) {
+        const data = updatedDocSnap.data();
+        let total = 0;
+        let panelCount = 0;
+        if (data.panel1) { total += data.panel1.total; panelCount++; }
+        if (data.panel2) { total += data.panel2.total; panelCount++; }
+        if (data.panel3) { total += data.panel3.total; panelCount++; }
+        const avgScore = panelCount > 0 ? total / panelCount : 0;
+        await setDoc(scoreDocRef, { avgScore }, { merge: true });
+      }
+
       toast({
         title: 'Success!',
         description: `Score submitted for ${team.teamName}.`,
       });
-    } else {
-      toast({
-        title: 'Error',
-        description: result.message,
-        variant: 'destructive',
-      });
+    } catch (error) {
+       console.error('Error submitting score:', error);
+       // This will be handled by the global error handler
     }
     setIsSubmitting(false);
   }

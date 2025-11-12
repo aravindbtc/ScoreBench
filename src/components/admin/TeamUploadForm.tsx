@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { uploadTeams } from '@/lib/actions';
 import { Loader2 } from 'lucide-react';
 import type { Team } from '@/lib/types';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 const fileSchema = z.object({
   jsonFile: z
@@ -30,6 +31,7 @@ const teamsArraySchema = z.array(teamSchema);
 export function TeamUploadForm() {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const form = useForm<{ jsonFile: FileList }>({
     resolver: zodResolver(fileSchema),
@@ -46,18 +48,22 @@ export function TeamUploadForm() {
         const jsonData = JSON.parse(text);
         const parsedTeams = teamsArraySchema.parse(jsonData);
 
-        const result = await uploadTeams(parsedTeams as Omit<Team, 'id'>[]);
+        const batch = writeBatch(firestore);
+        const teamsCollection = collection(firestore, 'teams');
+        parsedTeams.forEach((team) => {
+          const docRef = doc(teamsCollection);
+          batch.set(docRef, team);
+        });
 
-        if (result.success) {
-          toast({
-            title: 'Upload Successful',
-            description: result.message,
-          });
-          form.reset();
-        } else {
-          throw new Error(result.message);
-        }
+        await batch.commit();
+
+        toast({
+          title: 'Upload Successful',
+          description: `${parsedTeams.length} teams uploaded successfully.`,
+        });
+        form.reset();
       } catch (error) {
+        console.error('Error uploading teams:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         toast({
           title: 'Upload Failed',

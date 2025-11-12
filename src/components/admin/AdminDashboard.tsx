@@ -2,11 +2,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import type { Team, TeamScores, CombinedScoreData, Jury } from '@/lib/types';
 import { ScoreTable } from './ScoreTable';
 import { Button } from '@/components/ui/button';
-import { Download, Loader2, PlusCircle, Trash2, UserPlus } from 'lucide-react';
+import { Download, Loader2, PlusCircle, UserPlus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { AddTeamDialog } from './AddTeamDialog';
 import {
@@ -19,7 +19,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { deleteTeam, deleteJury } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamManagement } from './TeamManagement';
@@ -81,27 +80,31 @@ export function AdminDashboard() {
     if (!itemToDelete) return;
     setIsDeleting(true);
     
-    let result;
-    if (itemToDelete.type === 'team') {
-      result = await deleteTeam(itemToDelete.data.id);
-    } else {
-      result = await deleteJury(itemToDelete.data.id);
-    }
-    
-    if (result.success) {
+    try {
+      if (itemToDelete.type === 'team') {
+        const batch = writeBatch(firestore);
+        const teamDocRef = doc(firestore, 'teams', itemToDelete.data.id);
+        const scoreDocRef = doc(firestore, 'scores', itemToDelete.data.id);
+        batch.delete(teamDocRef);
+        batch.delete(scoreDocRef);
+        await batch.commit();
+      } else { // type is 'jury'
+        const juryDocRef = doc(firestore, 'juries', itemToDelete.data.id);
+        await writeBatch(firestore).delete(juryDocRef).commit();
+      }
+      
       toast({
         title: `${itemToDelete.type.charAt(0).toUpperCase() + itemToDelete.type.slice(1)} Deleted`,
-        description: result.message,
+        description: `Successfully deleted ${itemToDelete.data.teamName || itemToDelete.data.name}.`,
       });
-    } else {
-      toast({
-        title: `Error Deleting ${itemToDelete.type}`,
-        description: result.message,
-        variant: 'destructive',
-      });
+
+    } catch (error) {
+       console.error(`Error deleting ${itemToDelete.type}:`, error);
+       // This will be caught and displayed by the global error handler
+    } finally {
+      setIsDeleting(false);
+      setItemToDelete(null);
     }
-    setIsDeleting(false);
-    setItemToDelete(null);
   };
 
   const isLoading = teamsLoading || scoresLoading || juriesLoading;

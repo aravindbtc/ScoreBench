@@ -18,8 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { addJury } from '@/lib/actions';
 import { Loader2 } from 'lucide-react';
+import { useFirestore } from '@/firebase';
+import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
 
 const jurySchema = z.object({
   name: z.string().min(2, 'Jury name must be at least 2 characters.'),
@@ -36,6 +37,7 @@ interface AddJuryDialogProps {
 export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const form = useForm<JuryFormData>({
     resolver: zodResolver(jurySchema),
@@ -47,21 +49,32 @@ export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
 
   const onSubmit = async (data: JuryFormData) => {
     setIsSubmitting(true);
-    const result = await addJury(data);
+    try {
+      const juriesCollection = collection(firestore, 'juries');
+      const q = query(juriesCollection, where('panelNo', '==', data.panelNo));
+      const querySnapshot = await getDocs(q);
 
-    if (result.success) {
+      if (!querySnapshot.empty) {
+        toast({
+          title: 'Error',
+          description: `Panel number ${data.panelNo} already exists.`,
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      await addDoc(juriesCollection, data);
+
       toast({
         title: 'Jury Added',
-        description: result.message,
+        description: `Jury "${data.name}" added successfully.`,
       });
       form.reset();
       onOpenChange(false);
-    } else {
-      toast({
-        title: 'Error',
-        description: result.message,
-        variant: 'destructive',
-      });
+    } catch (error) {
+      // This will be handled by the global error listener
+      console.error('Failed to add jury:', error);
     }
     setIsSubmitting(false);
   };
