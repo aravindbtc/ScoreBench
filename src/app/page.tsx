@@ -9,8 +9,8 @@ import { LoginBackground } from '@/components/auth/LoginBackground';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getLoginBackground } from '@/lib/actions';
 
-export default function LoginPage() {
-  const background = getLoginBackground();
+export default async function LoginPage() {
+  const background = await getLoginBackground();
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">

@@ -41,7 +41,7 @@ export async function updateLoginBackground(imageUrl: string) {
     }
 }
 
-export function getLoginBackground(): ImagePlaceholder | null {
+export async function getLoginBackground(): Promise<ImagePlaceholder | null> {
   try {
     // Fallback to local placeholder if not in DB
     return PlaceHolderImages.find((img) => img.id === 'login-background') || null;
