@@ -14,8 +14,8 @@ import { Loader2 } from 'lucide-react';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { updateLoginBackground, getLoginBackground } from '@/lib/actions';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import type { ImagePlaceholder } from '@/lib/types';
+
 
 const formSchema = z.object({
   imageUrl: z.string().url('Please enter a valid URL.').or(z.literal('')),
@@ -25,6 +25,8 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function CustomizeLoginForm() {
   const [isSaving, setIsSaving] = useState(false);
+  const [initialBg, setInitialBg] = useState<ImagePlaceholder | null>(null);
+
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -35,21 +37,12 @@ export function CustomizeLoginForm() {
   });
 
   useEffect(() => {
-    // Listen for real-time updates to show the current value
-    const configDocRef = doc(db, 'appConfig', 'loginBackground');
-    const unsubscribe = onSnapshot(configDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            form.setValue('imageUrl', docSnap.data().imageUrl);
-        } else {
-             getLoginBackground().then(bg => {
-                if (bg) form.setValue('imageUrl', bg.imageUrl)
-             });
+    getLoginBackground().then(bg => {
+        if (bg?.imageUrl) {
+            form.setValue('imageUrl', bg.imageUrl);
+            setInitialBg(bg);
         }
-    }, (error) => {
-        console.error("Failed to listen for background changes:", error);
     });
-    
-    return () => unsubscribe();
   }, [form]);
 
   const handleUploadComplete = (url: string) => {
@@ -70,21 +63,23 @@ export function CustomizeLoginForm() {
         return;
     }
     setIsSaving(true);
-    const result = await updateLoginBackground(data.imageUrl);
-
-    if (result.success) {
-      toast({
-        title: 'Success!',
-        description: 'The login background has been updated.',
-      });
-    } else {
-      toast({
+    try {
+      const result = await updateLoginBackground(data.imageUrl);
+       if (result.success) {
+        toast({
+          title: 'Success!',
+          description: 'The login background has been updated.',
+        });
+      }
+    } catch (error) {
+       toast({
         title: 'Save Failed',
-        description: result.message,
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
         variant: 'destructive',
       });
+    } finally {
+        setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   const imageUrl = form.watch('imageUrl');

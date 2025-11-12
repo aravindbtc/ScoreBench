@@ -13,6 +13,7 @@ import {
   query,
   where,
   getDoc,
+  FirestoreError,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Team, Score, ImagePlaceholder, Jury } from './types';
@@ -27,23 +28,38 @@ export async function verifyAdminPassword(password: string) {
 }
 
 export async function updateLoginBackground(imageUrl: string) {
-    'use server';
-    try {
-        const configDocRef = doc(db, 'appConfig', 'loginBackground');
-        await setDoc(configDocRef, { imageUrl }, { merge: true });
-        revalidatePath('/');
-        revalidatePath('/admin/upload-image');
-        return { success: true, message: 'Background updated successfully.' };
-    } catch (error) {
-        console.error('Error updating login background:', error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        return { success: false, message: `Failed to update background: ${errorMessage}` };
-    }
+  'use server';
+  // This function is intentionally designed to throw an error on permission failure
+  // to provide a detailed error message in the Next.js overlay for debugging.
+  const configDocRef = doc(db, 'appConfig', 'loginBackground');
+  await setDoc(configDocRef, { imageUrl }, { merge: true });
+
+  // This part will only be reached if the setDoc is successful.
+  revalidatePath('/');
+  revalidatePath('/admin/upload-image');
+  return { success: true, message: 'Background updated successfully.' };
 }
 
 export async function getLoginBackground(): Promise<ImagePlaceholder | null> {
   try {
-    // Fallback to local placeholder if not in DB
+    const loginBgConfigRef = doc(db, 'appConfig', 'loginBackground');
+    const docSnap = await getDoc(loginBgConfigRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      // Ensure the fetched data matches the ImagePlaceholder structure
+      if (data.imageUrl && typeof data.imageUrl === 'string') {
+        const placeholder = PlaceHolderImages.find((img) => img.id === 'login-background') || {
+          id: 'login-background',
+          description: 'Custom login background',
+          imageHint: 'background',
+        };
+        return {
+          ...placeholder,
+          imageUrl: data.imageUrl,
+        };
+      }
+    }
+    // Fallback to local placeholder if not in DB or data is malformed
     return PlaceHolderImages.find((img) => img.id === 'login-background') || null;
   } catch (error) {
     console.error("Error getting login background:", error);
@@ -243,7 +259,7 @@ export async function seedInitialData() {
     if (!loginBgConfigSnap.exists()) {
       const defaultBg = PlaceHolderImages.find((img) => img.id === 'login-background');
       if (defaultBg) {
-        batch.set(loginBgConfigRef, defaultBg);
+        batch.set(loginBgConfigRef, {imageUrl: defaultBg.imageUrl});
       }
     }
     
