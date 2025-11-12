@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -15,12 +16,16 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import type { CombinedScoreData, Score } from '@/lib/types';
+import type { CombinedScoreData, Score, TeamScores } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Trash2 } from 'lucide-react';
+import { Loader2, Trash2, Wand2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { generateConsolidatedFeedback } from '@/ai/flows/generate-consolidated-feedback';
+import { useToast } from '@/hooks/use-toast';
+import { setDocumentNonBlocking, useFirestore } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 interface ScoreTableProps {
   data: CombinedScoreData[];
@@ -58,6 +63,66 @@ const PanelScoreDetails = ({ panelNo, score }: { panelNo: number, score?: Score 
         </CardContent>
     </Card>
   )
+};
+
+const ConsolidatedFeedback = ({ scores, teamId }: { scores: TeamScores, teamId: string }) => {
+    const [isGenerating, setIsGenerating] = useState(false);
+    const { toast } = useToast();
+    const firestore = useFirestore();
+
+    const handleGenerate = async () => {
+        setIsGenerating(true);
+        try {
+            const result = await generateConsolidatedFeedback({
+                panel1: scores.panel1,
+                panel2: scores.panel2,
+                panel3: scores.panel3,
+            });
+            if (result.feedback) {
+                const scoreDocRef = doc(firestore, 'scores', teamId);
+                setDocumentNonBlocking(scoreDocRef, { consolidatedFeedback: result.feedback }, { merge: true });
+                toast({
+                    title: 'Summary Generated!',
+                    description: 'The consolidated AI summary has been created and saved.',
+                });
+            } else {
+                throw new Error('No feedback was generated.');
+            }
+        } catch (error) {
+            console.error("Failed to generate consolidated feedback", error);
+            const message = error instanceof Error ? error.message : "An unknown error occurred.";
+            toast({
+                title: 'Generation Failed',
+                description: message,
+                variant: 'destructive',
+            });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const hasAllPanels = scores.panel1 && scores.panel2 && scores.panel3;
+
+    return (
+        <Card className="md:col-span-3 bg-muted/30 border-dashed">
+            <CardHeader>
+                <CardTitle className="text-lg">Consolidated AI Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {scores.consolidatedFeedback ? (
+                    <p className="text-muted-foreground italic">"{scores.consolidatedFeedback}"</p>
+                ) : (
+                    <div className='text-center py-4 space-y-3'>
+                        <p className='text-sm text-muted-foreground'>{hasAllPanels ? "Click the button to generate a summary from all panel scores." : "A summary can be generated once all three panels have submitted their scores."}</p>
+                        <Button onClick={handleGenerate} disabled={isGenerating || !hasAllPanels}>
+                            {isGenerating ? <Loader2 className="mr-2 animate-spin" /> : <Wand2 className="mr-2" />}
+                            Generate AI Summary
+                        </Button>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
 };
 
 
@@ -121,6 +186,7 @@ export function ScoreTable({ data, onDeleteRequest }: ScoreTableProps) {
                         <PanelScoreDetails panelNo={1} score={item.scores.panel1} />
                         <PanelScoreDetails panelNo={2} score={item.scores.panel2} />
                         <PanelScoreDetails panelNo={3} score={item.scores.panel3} />
+                        <ConsolidatedFeedback scores={item.scores} teamId={item.id} />
                       </div>
                     </AccordionContent>
                   </TableCell>

@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Team": {
@@ -54,14 +55,14 @@
         "autoFeedback": {
           "type": "string",
           "description": "AI generated feedback for the team."
+        },
+        "consolidatedFeedback": {
+          "type": "string",
+          "description": "A single, AI-generated summary of feedback from all panels."
         }
       },
       "required": [
-        "teamId",
-        "panel1",
-        "panel2",
-        "panel3",
-        "avgScore"
+        "teamId"
       ]
     },
     "Jury": {

@@ -28,6 +28,7 @@ export interface TeamScores {
   panel2?: Score;
   panel3?: Score;
   avgScore?: number;
+  consolidatedFeedback?: string;
 }
 
 export interface CombinedScoreData extends Team {
