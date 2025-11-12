@@ -17,6 +17,7 @@ import {
 import { db } from './firebase';
 import type { Team, Score, ImagePlaceholder, Jury } from './types';
 import { PlaceHolderImages } from './placeholder-images';
+import { getAdminApp } from './firebase-admin';
 
 export async function verifyAdminPassword(password: string) {
   'use server';
@@ -175,10 +176,11 @@ export async function submitScore(
 export async function getLoginBackground(): Promise<ImagePlaceholder> {
   'use server';
   try {
-    const configDocRef = doc(db, 'appConfig', 'loginBackground');
-    const docSnap = await getDoc(configDocRef);
+    const adminDb = getAdminApp().firestore();
+    const configDocRef = adminDb.collection('appConfig').doc('loginBackground');
+    const docSnap = await configDocRef.get();
     
-    if (docSnap.exists()) {
+    if (docSnap.exists) {
       return docSnap.data() as ImagePlaceholder;
     }
   } catch (error) {
@@ -192,10 +194,11 @@ export async function getLoginBackground(): Promise<ImagePlaceholder> {
 export async function updateLoginBackground(data: { imageUrl: string }) {
   'use server';
   try {
-    const configDocRef = doc(db, 'appConfig', 'loginBackground');
-    // Using setDoc with merge: true will create the document if it doesn't exist,
-    // or update it if it does. This is more robust than updateDoc.
-    await setDoc(configDocRef, { imageUrl: data.imageUrl }, { merge: true });
+    const adminDb = getAdminApp().firestore();
+    const configDocRef = adminDb.collection('appConfig').doc('loginBackground');
+    
+    // Using set with merge: true will create or update the document.
+    await configDocRef.set({ imageUrl: data.imageUrl }, { merge: true });
     
     revalidatePath('/');
     revalidatePath('/admin/upload-image');
