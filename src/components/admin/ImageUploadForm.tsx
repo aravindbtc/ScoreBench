@@ -65,7 +65,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
       });
 
       // 2. Upload the file to ImageKit
-      const uploader = imagekit.upload({
+      imagekit.upload({
         file: selectedFile,
         fileName: selectedFile.name,
         token: authParams.token,
@@ -80,9 +80,8 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
         if (err) {
           console.error("ImageKit upload failed:", err);
           let description = 'Could not upload the image. Check the console for details.';
-          // Check for a more specific security error
-          if (err.message.includes('security')) {
-              description = 'A security error occurred. This often means your Firebase Storage rules are not configured correctly to allow uploads. Please check and update your rules in the Firebase console.';
+          if (String(err).includes('security')) {
+              description = 'A security error occurred. This often means your ImageKit settings are incorrect. Please verify your keys and allowed origins in the ImageKit dashboard.';
           }
           toast({
             title: 'Upload Failed',
@@ -92,7 +91,6 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
           return;
         }
 
-        console.log("ImageKit upload successful:", result);
         if (result) {
           onUploadComplete(result.url);
         }
