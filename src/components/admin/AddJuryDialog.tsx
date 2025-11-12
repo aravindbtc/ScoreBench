@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -83,7 +84,7 @@ export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
                 <FormItem>
                   <Label htmlFor="name">Jury Name</Label>
                   <FormControl>
-                    <Input id="name" placeholder="e.g., Panel 4" {...field} />
+                    <Input id="name" placeholder="e.g., Industry Experts" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
