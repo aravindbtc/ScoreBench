@@ -1,4 +1,6 @@
 
+'use client';
+
 import { CustomizeLoginForm } from "@/components/admin/CustomizeLoginForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Suspense } from "react";
@@ -6,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CurrentLoginBackground } from "@/components/admin/CurrentLoginBackground";
 
 
-export default async function CustomizeLoginPage() {
+export default function CustomizeLoginPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Customize Login Page</h1>
