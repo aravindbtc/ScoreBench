@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -11,9 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import NextImage from 'next/image';
-import { updateLoginBackground, getLoginBackground } from '@/lib/actions';
-import { Skeleton } from '../ui/skeleton';
+import { updateLoginBackground } from '@/lib/actions';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -23,7 +21,6 @@ const urlSchema = z.object({
 
 export function CustomizeLoginForm() {
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   const form = useForm<{ imageUrl: string }>({
@@ -32,18 +29,6 @@ export function CustomizeLoginForm() {
       imageUrl: '',
     },
   });
-
-  useEffect(() => {
-    async function fetchInitialBackground() {
-      setIsLoading(true);
-      const bg = await getLoginBackground();
-      if (bg) {
-        form.reset({ imageUrl: bg.imageUrl });
-      }
-      setIsLoading(false);
-    }
-    fetchInitialBackground();
-  }, [form]);
 
   const handleUploadComplete = (url: string) => {
     form.setValue('imageUrl', url);
@@ -73,30 +58,8 @@ export function CustomizeLoginForm() {
 
   const imageUrl = form.watch('imageUrl');
 
-  if (isLoading) {
-    return <Skeleton className="h-[450px] w-full" />;
-  }
-
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium mb-4">Current Background Preview</h3>
-        <div className="rounded-lg border overflow-hidden aspect-video relative max-h-64 bg-muted">
-            {imageUrl ? (
-                <NextImage
-                    src={imageUrl}
-                    alt="Current login background"
-                    fill
-                    className="object-cover"
-                />
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>No image URL set.</p>
-              </div>
-            )}
-        </div>
-      </div>
-
       <Tabs defaultValue="upload" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="upload">Upload Image</TabsTrigger>
