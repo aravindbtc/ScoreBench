@@ -13,7 +13,9 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Loader2 } from 'lucide-react';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { updateLoginBackground } from '@/lib/actions';
+import { useFirestore } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
@@ -26,6 +28,7 @@ type FormValues = z.infer<typeof formSchema>;
 export function CustomizeLoginForm() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -60,29 +63,16 @@ export function CustomizeLoginForm() {
         return;
     }
     setIsSaving(true);
-    try {
-      const result = await updateLoginBackground(data.imageUrl);
-       if (result.success) {
-        toast({
-          title: 'Success!',
-          description: 'The login background has been updated. It may take a moment to reflect.',
-        });
-      } else {
-        toast({
-          title: 'Save Failed',
-          description: result.message || 'An unknown error occurred.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-       toast({
-        title: 'Save Failed',
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-        setIsSaving(false);
-    }
+    
+    const docRef = doc(firestore, 'appConfig', 'loginBackground');
+    setDocumentNonBlocking(docRef, { imageUrl: data.imageUrl });
+
+    toast({
+        title: 'Success!',
+        description: 'The login background has been updated. It may take a moment to reflect.',
+    });
+
+    setIsSaving(false);
   };
 
   const imageUrl = form.watch('imageUrl');
