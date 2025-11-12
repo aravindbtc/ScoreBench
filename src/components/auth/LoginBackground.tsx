@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export function LoginBackground() {
   const [background, setBackground] = useState<ImagePlaceholder | null>(null);
@@ -27,6 +29,13 @@ export function LoginBackground() {
         setLoading(false);
     }, (error) => {
         console.error("Failed to listen to login background changes:", error);
+
+        const contextualError = new FirestorePermissionError({
+          operation: 'get',
+          path: configDocRef.path,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+        
         // On error, also use fallback
         const fallback = PlaceHolderImages.find((img) => img.id === 'login-background');
         if(fallback) setBackground(fallback);

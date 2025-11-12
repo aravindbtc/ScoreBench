@@ -230,4 +230,3 @@ export async function seedInitialData() {
     return { success: false, message: "Failed to seed initial data." };
   }
 }
-

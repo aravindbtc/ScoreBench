@@ -17,6 +17,8 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ImagePlaceholder } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const formSchema = z.object({
   imageUrl: z.string().url('Please enter a valid URL.').or(z.literal('')),
@@ -49,15 +51,14 @@ export function CustomizeLoginForm() {
             }
         } catch (error) {
             console.error("Error getting document:", error);
-             if (error instanceof Error && (error.message.includes('offline') || error.message.includes('Failed to get document'))) {
-                 toast({
-                    title: 'Firestore Connection Error',
-                    description: 'Using local fallback image. The database might not be created yet.',
-                    variant: 'destructive',
-                });
-                const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
-                if(fallback) form.setValue('imageUrl', fallback.imageUrl);
-            }
+            const contextualError = new FirestorePermissionError({
+              operation: 'get',
+              path: configDocRef.path,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+
+            const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
+            if(fallback) form.setValue('imageUrl', fallback.imageUrl);
         }
     }
     getCurrentBg();
@@ -81,23 +82,27 @@ export function CustomizeLoginForm() {
         return;
     }
     setIsSaving(true);
-    try {
-        const configDocRef = doc(db, 'appConfig', 'loginBackground');
-        await setDoc(configDocRef, { imageUrl: data.imageUrl }, { merge: true });
+    const configDocRef = doc(db, 'appConfig', 'loginBackground');
+    const payload = { imageUrl: data.imageUrl };
+
+    setDoc(configDocRef, payload, { merge: true })
+      .then(() => {
         toast({
             title: 'Success!',
             description: 'The login background has been updated.',
         });
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'An unknown error occurred.';
-        toast({
-            title: 'Error',
-            description: `Failed to update: ${message}`,
-            variant: 'destructive',
+      })
+      .catch(error => {
+        const contextualError = new FirestorePermissionError({
+          path: configDocRef.path,
+          operation: 'write',
+          requestResourceData: payload,
         });
-    } finally {
+        errorEmitter.emit('permission-error', contextualError);
+      })
+      .finally(() => {
         setIsSaving(false);
-    }
+      });
   };
 
   const imageUrl = form.watch('imageUrl');
