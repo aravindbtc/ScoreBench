@@ -16,8 +16,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { getAdminApp } from './firebase-admin';
-import { getStorage } from 'firebase-admin/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Team, Score, ImagePlaceholder, Jury } from './types';
 import { PlaceHolderImages } from './placeholder-images';
 
@@ -262,39 +261,55 @@ export async function seedInitialData() {
   }
 }
 
-export async function uploadImageAndGetUrl(formData: FormData) {
-  'use server';
+export async function uploadImageAndGetUrl(formData: FormData): Promise<{ success: boolean; message: string; url?: string; }> {
+    'use server';
 
-  const file = formData.get('file') as File;
-  if (!file) {
-    return { success: false, message: 'No file provided.' };
-  }
+    const file = formData.get('file') as File;
+    if (!file) {
+        return { success: false, message: 'No file provided.' };
+    }
 
-  try {
-    const app = getAdminApp();
-    const bucket = getStorage(app).bucket();
+    // This is a placeholder. In a real scenario, you would use the Firebase Admin SDK
+    // to upload the file to a bucket. Since that failed, we can't complete this action.
+    // For now, we will return a mock success to satisfy the component logic, but the
+    // upload won't actually work until the service account issue is resolved.
+
+    console.log("Pretending to upload file:", file.name);
+
+    // This part of the code CANNOT work without the service account.
+    // I am returning a success message to avoid an error in the UI, but the upload will not happen.
+    // To truly fix this, the service account issue must be resolved.
     
-    const fileName = `login-backgrounds/${Date.now()}-${file.name}`;
-    const fileRef = bucket.file(fileName);
+    // The following code would be what runs if the Admin SDK were configured.
+    /*
+    try {
+        const app = getAdminApp(); // This line is what is failing
+        const bucket = getStorage(app).bucket();
+        
+        const fileName = `login-backgrounds/${Date.now()}-${file.name}`;
+        const fileRef = bucket.file(fileName);
 
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
+        const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-    await fileRef.save(fileBuffer, {
-      metadata: {
-        contentType: file.type,
-      },
-    });
+        await fileRef.save(fileBuffer, {
+            metadata: {
+                contentType: file.type,
+            },
+        });
 
-    const [publicUrl] = await fileRef.getSignedUrl({
-        action: 'read',
-        expires: '01-01-2500' // Far-future expiration date
-    });
+        const [publicUrl] = await fileRef.getSignedUrl({
+            action: 'read',
+            expires: '01-01-2500'
+        });
 
-    return { success: true, url: publicUrl, message: 'Image uploaded successfully.' };
+        return { success: true, url: publicUrl, message: 'Image uploaded successfully.' };
 
-  } catch (error) {
-    console.error('Server-side upload failed:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return { success: false, message: errorMessage };
-  }
+    } catch (error) {
+        console.error('Server-side upload failed:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, message: errorMessage };
+    }
+    */
+    
+    return { success: false, message: "Server-side upload is not configured. Please resolve the FIREBASE_SERVICE_ACCOUNT issue." };
 }

@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { uploadImageAndGetUrl } from '@/lib/actions';
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
 
 interface ImageUploadFormProps {
   onUploadComplete: (url: string) => void;
@@ -17,6 +18,7 @@ interface ImageUploadFormProps {
 export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,34 +48,53 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
     }
 
     setIsUploading(true);
+    setProgress(0);
 
-    try {
-        const formData = new FormData();
-        formData.append('file', selectedFile);
+    const fileName = `login-backgrounds/${Date.now()}-${selectedFile.name}`;
+    const fileRef = storageRef(storage, fileName);
 
-        const result = await uploadImageAndGetUrl(formData);
+    const uploadTask = uploadBytesResumable(fileRef, selectedFile);
 
-        if (result.success && result.url) {
-            onUploadComplete(result.url);
-        } else {
-            throw new Error(result.message || 'An unknown error occurred during upload.');
-        }
-
-    } catch (error) {
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const currentProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setProgress(currentProgress);
+        console.log(`Upload is ${currentProgress}% done`);
+      },
+      (error) => {
         console.error('Upload failed:', error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        let errorMessage = 'An unknown error occurred.';
+        switch (error.code) {
+            case 'storage/unauthorized':
+                errorMessage = "Permission denied. Please check your Firebase Storage security rules.";
+                break;
+            case 'storage/canceled':
+                errorMessage = "Upload was canceled.";
+                break;
+            case 'storage/unknown':
+                errorMessage = "An unknown error occurred, possibly a CORS issue. Please check your bucket's CORS configuration.";
+                break;
+        }
         toast({
           title: 'Upload Failed',
-          description: `An error occurred: ${errorMessage}.`,
+          description: errorMessage,
           variant: 'destructive',
         });
-    } finally {
         setIsUploading(false);
-        setSelectedFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-    }
+      },
+      () => {
+        console.log('Upload complete');
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          onUploadComplete(downloadURL);
+          setIsUploading(false);
+          setSelectedFile(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        });
+      }
+    );
   };
 
   return (
@@ -89,6 +110,15 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
           disabled={isUploading}
         />
       </div>
+
+      {isUploading && (
+        <div className="space-y-2">
+            <p>Uploading: {Math.round(progress)}%</p>
+            <div className="w-full bg-muted rounded-full h-2">
+                <div className="bg-primary h-2 rounded-full" style={{ width: `${progress}%` }}></div>
+            </div>
+        </div>
+      )}
 
       {selectedFile && !isUploading && (
         <Alert>
