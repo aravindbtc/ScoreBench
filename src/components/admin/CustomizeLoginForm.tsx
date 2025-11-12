@@ -49,10 +49,19 @@ export function CustomizeLoginForm() {
             }
         } catch (error) {
             console.error("Error getting document:", error);
+             if (error instanceof Error && (error.message.includes('offline') || error.message.includes('Failed to get document'))) {
+                 toast({
+                    title: 'Firestore Connection Error',
+                    description: 'Using local fallback image. The database might not be created yet.',
+                    variant: 'destructive',
+                });
+                const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
+                if(fallback) form.setValue('imageUrl', fallback.imageUrl);
+            }
         }
     }
     getCurrentBg();
-  }, [form]);
+  }, [form, toast]);
 
   const handleUploadComplete = (url: string) => {
     form.setValue('imageUrl', url, { shouldValidate: true });

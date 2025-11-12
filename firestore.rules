@@ -60,7 +60,7 @@ service cloud.firestore {
     /**
      * @description Grants access to app configuration data.
      * @path /appConfig/{docId}
-     * @allow (read, list) Publicly readable for login background.
+     * @allow (read) Publicly readable for login background.
      * @allow (write) Allow any authenticated user to write. (Admin check is done in UI, not rules)
      */
     match /appConfig/{docId} {
