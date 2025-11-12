@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -8,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { verifyAdminPassword } from '@/lib/actions';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { signInAnonymously } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export function AdminLogin() {
   const [password, setPassword] = useState('');
@@ -21,8 +24,19 @@ export function AdminLogin() {
     setIsLoading(true);
     const result = await verifyAdminPassword(password);
     if (result.success) {
-      sessionStorage.setItem('admin-auth', 'true');
-      router.push('/admin');
+      try {
+        // Also sign in anonymously to get a UID for Firestore rules
+        await signInAnonymously(auth);
+        sessionStorage.setItem('admin-auth', 'true');
+        router.push('/admin');
+      } catch (error) {
+         toast({
+          title: 'Firebase Login Failed',
+          description: 'Could not authenticate with Firebase. Please try again.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+      }
     } else {
       toast({
         title: 'Login Failed',
