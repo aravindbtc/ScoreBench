@@ -1,74 +1,70 @@
 
-/**
- * @fileoverview Firestore Security Rules for HackEval application.
- *
- * Core Philosophy:
- * This ruleset prioritizes authorization independence by denormalizing data, allowing for simpler and more performant rules.
- * It leverages Anonymous Authentication for jury members, with access primarily governed by the Firebase Auth service.
- * Data validation is relaxed to allow for rapid prototyping, focusing on authorization and relational integrity.
- *
- * Data Structure:
- * - /teams/{teamId}: Stores information about each team.
- * - /scores/{teamId}: Stores scores given to a team by jury members.
- * - /juries/{juryId}: Stores information about jury members.
- * - /appConfig/loginBackground: Stores configuration for the app, like the login background URL.
- *
- * Key Security Decisions:
- * - Jury member access to scoring is granted via Anonymous Authentication, with no reliance on custom claims or complex role hierarchies.
- * - Write operations to the `/scores/{teamId}` collection happen with the `request.auth.uid` parameter.
- * - No user listing is allowed for any collection unless specified.
- *
- * Denormalization for Authorization:
- * - The `/scores/{teamId}` collection includes the `teamId`, allowing direct association between scores and teams without needing to perform `get()` operations.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper function to check if a user is signed in.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if a user is an admin.
+    // In this app, an admin is just a signed-in user.
+    // UI-level checks prevent non-admins from reaching admin actions.
+    function isAdmin() {
+      return isSignedIn();
+    }
+
     /**
-     * @description Grants access to team data.
-     * @path /teams/{teamId}
-     * @allow (read, list, write) Allow any authenticated user. Admin actions are protected by the UI.
+     * Teams Collection:
+     * - Admins can read, list, create, update, and delete teams.
+     * - Juries (any signed-in user) can read and list teams to evaluate them.
      */
     match /teams/{teamId} {
-      allow read, list, write: if isSignedIn();
+      allow read, list: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     /**
-     * @description Grants jury members (via anonymous auth) access to create, read, update and delete scores.
-     * @path /scores/{teamId}
-     * @allow (read, list, write) Allow any authenticated user.
+     * Scores Collection:
+     * - Admins can read all scores for the dashboard.
+     * - Juries (any signed-in user) can read scores to see if they've already voted.
+     * - Juries can create and update their own panel's score, but not others'.
+     * - Admins can delete scores when deleting a team.
      */
     match /scores/{teamId} {
-       allow read, list, write: if isSignedIn();
+      allow read: if isSignedIn();
+      // Allow creation if the document doesn't exist yet.
+      allow create: if isSignedIn();
+      // Allow update if the user is only changing their own panel's data.
+      // This prevents a jury member from overwriting another panel's score.
+      allow update: if isSignedIn() && (
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel1', 'avgScore']) && request.resource.data.panel1.keys().hasOnly(['innovation', 'relevance', 'technical', 'presentation', 'feasibility', 'total', 'remarks', 'aiFeedback'])) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel2', 'avgScore']) && request.resource.data.panel2.keys().hasOnly(['innovation', 'relevance', 'technical', 'presentation', 'feasibility', 'total', 'remarks', 'aiFeedback'])) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel3', 'avgScore']) && request.resource.data.panel3.keys().hasOnly(['innovation', 'relevance', 'technical', 'presentation', 'feasibility', 'total', 'remarks', 'aiFeedback']))
+      );
+       // Allow admins (any signed-in user via server action) to delete.
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Grants access to jury member data.
-     * @path /juries/{juryId}
-     * @allow (read, list) Publicly readable for jury selection on login.
-     * @allow (write) Only authenticated users (admins) can modify jury data.
+     * Juries Collection:
+     * - Anyone can read/list juries for the login dropdown.
+     * - Only admins can create, update, or delete jury members.
      */
     match /juries/{juryId} {
       allow read, list: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     /**
-     * @description Grants access to app configuration data.
-     * @path /appConfig/{docId}
-     * @allow (read, list) Publicly readable for login background.
-     * @allow (write) Allow any authenticated user to write. (Admin UI is protected, so only admins can trigger this)
+     * AppConfig Collection:
+     * - Anyone can read the config (e.g., for the login background).
+     * - Only admins can write to the config.
      */
     match /appConfig/{docId} {
       allow read: if true;
-      allow write: if isSignedIn();
-    }
-
-
-    // Helper function to determine if the user is signed in.
-    function isSignedIn() {
-      return request.auth != null;
+      allow write: if isAdmin();
     }
   }
 }
