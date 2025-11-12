@@ -70,8 +70,8 @@ export async function deleteJury(juryId: string) {
   try {
     const juryDocRef = doc(db, 'juries', juryId);
     await deleteDoc(juryDocRef);
-    revalidatePath('/admin');
-    revalidatePath('/');
+revalidatePath('/admin');
+revalidatePath('/');
     return { success: true, message: 'Jury deleted successfully.' };
   } catch (error) {
     console.error('Error deleting jury:', error);
