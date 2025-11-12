@@ -1,56 +1,18 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import type { ImagePlaceholder } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
-export function LoginBackground() {
-  const [background, setBackground] = useState<ImagePlaceholder | null>(null);
-  const [loading, setLoading] = useState(true);
+interface LoginBackgroundProps {
+  background: ImagePlaceholder | null;
+}
 
-  useEffect(() => {
-    const configDocRef = doc(db, 'appConfig', 'loginBackground');
-    
-    const unsubscribe = onSnapshot(configDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            setBackground(docSnap.data() as ImagePlaceholder);
-        } else {
-            // Fallback to the default from JSON file if Firestore doc doesn't exist
-            const fallback = PlaceHolderImages.find((img) => img.id === 'login-background');
-            if(fallback) setBackground(fallback);
-        }
-        setLoading(false);
-    }, (error) => {
-        console.error("Failed to listen to login background changes:", error);
-
-        const contextualError = new FirestorePermissionError({
-          operation: 'get',
-          path: configDocRef.path,
-        });
-        errorEmitter.emit('permission-error', contextualError);
-        
-        // On error, also use fallback
-        const fallback = PlaceHolderImages.find((img) => img.id === 'login-background');
-        if(fallback) setBackground(fallback);
-        setLoading(false);
-    });
-
-    return () => unsubscribe(); // Cleanup listener
-  }, []);
-
-  if (loading) {
-    return <Skeleton className="absolute inset-0 -z-10" />;
-  }
-
+export function LoginBackground({ background }: LoginBackgroundProps) {
   if (!background || !background.imageUrl) {
-    return null;
+    // Render a skeleton or nothing if the URL isn't available on initial render
+    return <Skeleton className="absolute inset-0 -z-10" />;
   }
 
   return (

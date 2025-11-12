@@ -7,7 +7,6 @@ import {
   doc,
   writeBatch,
   getDocs,
-  getDoc,
   setDoc,
   addDoc,
   deleteDoc,
@@ -17,6 +16,10 @@ import {
 import { db } from './firebase';
 import type { Team, Score, ImagePlaceholder, Jury } from './types';
 import { PlaceHolderImages } from './placeholder-images';
+import { getAdminApp } from './firebase-admin';
+
+// Re-importing getDoc from the admin SDK specifically for server actions
+import { getDoc as getAdminDoc, setDoc as setAdminDoc } from 'firebase-admin/firestore';
 
 export async function verifyAdminPassword(password: string) {
   'use server';
@@ -25,6 +28,43 @@ export async function verifyAdminPassword(password: string) {
   }
   return { success: false, message: 'Incorrect password.' };
 }
+
+export async function updateLoginBackground(imageUrl: string) {
+    'use server';
+    try {
+        const adminDb = getAdminApp().firestore();
+        const configDocRef = adminDb.collection('appConfig').doc('loginBackground');
+        await setAdminDoc(configDocRef, { imageUrl }, { merge: true });
+        revalidatePath('/');
+        revalidatePath('/admin/upload-image');
+        return { success: true, message: 'Background updated successfully.' };
+    } catch (error) {
+        console.error('Error updating login background:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return { success: false, message: `Failed to update background: ${errorMessage}` };
+    }
+}
+
+export async function getLoginBackground(): Promise<ImagePlaceholder | null> {
+    'use server';
+    try {
+        const adminDb = getAdminApp().firestore();
+        const configDocRef = adminDb.collection('appConfig').doc('loginBackground');
+        const docSnap = await getAdminDoc(configDocRef);
+
+        if (docSnap.exists()) {
+            return docSnap.data() as ImagePlaceholder;
+        } else {
+            // Fallback to local placeholder if not in DB
+            return PlaceHolderImages.find((img) => img.id === 'login-background') || null;
+        }
+    } catch (error) {
+        console.error("Error getting login background:", error);
+        // On error, always return the local fallback
+        return PlaceHolderImages.find((img) => img.id === 'login-background') || null;
+    }
+}
+
 
 export async function addJury(jury: Omit<Jury, 'id'>) {
   'use server';

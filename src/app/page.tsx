@@ -7,12 +7,15 @@ import { AdminLogin } from '@/components/auth/AdminLogin';
 import { AppLogo } from '@/components/layout/AppLogo';
 import { LoginBackground } from '@/components/auth/LoginBackground';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getLoginBackground } from '@/lib/actions';
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const background = await getLoginBackground();
+
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
       <Suspense fallback={<Skeleton className="absolute inset-0 -z-10" />}>
-        <LoginBackground />
+        <LoginBackground background={background} />
       </Suspense>
       
       <div className="absolute top-6 left-6">

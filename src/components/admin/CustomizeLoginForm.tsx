@@ -13,12 +13,9 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Loader2 } from 'lucide-react';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { updateLoginBackground, getLoginBackground } from '@/lib/actions';
+import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { ImagePlaceholder } from '@/lib/types';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 const formSchema = z.object({
   imageUrl: z.string().url('Please enter a valid URL.').or(z.literal('')),
@@ -38,31 +35,22 @@ export function CustomizeLoginForm() {
   });
 
   useEffect(() => {
-    async function getCurrentBg() {
-        const configDocRef = doc(db, 'appConfig', 'loginBackground');
-        try {
-            const docSnap = await getDoc(configDocRef);
-            if (docSnap.exists()) {
-                const data = docSnap.data() as ImagePlaceholder;
-                form.setValue('imageUrl', data.imageUrl);
-            } else {
-                 const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
-                 if(fallback) form.setValue('imageUrl', fallback.imageUrl);
-            }
-        } catch (error) {
-            console.error("Error getting document:", error);
-            const contextualError = new FirestorePermissionError({
-              operation: 'get',
-              path: configDocRef.path,
-            });
-            errorEmitter.emit('permission-error', contextualError);
-
-            const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
-            if(fallback) form.setValue('imageUrl', fallback.imageUrl);
+    // Listen for real-time updates to show the current value
+    const configDocRef = doc(db, 'appConfig', 'loginBackground');
+    const unsubscribe = onSnapshot(configDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            form.setValue('imageUrl', docSnap.data().imageUrl);
+        } else {
+             getLoginBackground().then(bg => {
+                if (bg) form.setValue('imageUrl', bg.imageUrl)
+             });
         }
-    }
-    getCurrentBg();
-  }, [form, toast]);
+    }, (error) => {
+        console.error("Failed to listen for background changes:", error);
+    });
+    
+    return () => unsubscribe();
+  }, [form]);
 
   const handleUploadComplete = (url: string) => {
     form.setValue('imageUrl', url, { shouldValidate: true });
@@ -82,27 +70,21 @@ export function CustomizeLoginForm() {
         return;
     }
     setIsSaving(true);
-    const configDocRef = doc(db, 'appConfig', 'loginBackground');
-    const payload = { imageUrl: data.imageUrl };
+    const result = await updateLoginBackground(data.imageUrl);
 
-    setDoc(configDocRef, payload, { merge: true })
-      .then(() => {
-        toast({
-            title: 'Success!',
-            description: 'The login background has been updated.',
-        });
-      })
-      .catch(error => {
-        const contextualError = new FirestorePermissionError({
-          path: configDocRef.path,
-          operation: 'write',
-          requestResourceData: payload,
-        });
-        errorEmitter.emit('permission-error', contextualError);
-      })
-      .finally(() => {
-        setIsSaving(false);
+    if (result.success) {
+      toast({
+        title: 'Success!',
+        description: 'The login background has been updated.',
       });
+    } else {
+      toast({
+        title: 'Save Failed',
+        description: result.message,
+        variant: 'destructive',
+      });
+    }
+    setIsSaving(false);
   };
 
   const imageUrl = form.watch('imageUrl');
