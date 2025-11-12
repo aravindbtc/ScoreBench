@@ -1,23 +1,13 @@
 
+import { initializeFirebase } from './firebase-client';
+import { firebaseConfig as config } from '@/firebase/config';
 
-import { getApp, getApps, initializeApp, type FirebaseOptions } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
-
-const firebaseConfig: FirebaseOptions = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+const { app, auth, db, storage } = {
+  ...initializeFirebase(),
+  storage: null, // No storage is initialized in initializeFirebase, so explicitly set to null.
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+// Re-export firebaseConfig for any parts of the app that might still reference it directly.
+export const firebaseConfig = config;
 
-export { app, auth, db, storage, firebaseConfig };
-
+export { app, auth, db, storage };
