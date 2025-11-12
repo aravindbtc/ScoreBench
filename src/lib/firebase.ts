@@ -1,13 +1,13 @@
 
-import { initializeFirebase } from './firebase-client';
-import { firebaseConfig as config } from '@/firebase/config';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { firebaseConfig } from '@/firebase/config';
 
-const { app, auth, db, storage } = {
-  ...initializeFirebase(),
-  storage: null, // No storage is initialized in initializeFirebase, so explicitly set to null.
-};
+// This function ensures Firebase is initialized, but only once.
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Re-export firebaseConfig for any parts of the app that might still reference it directly.
-export const firebaseConfig = config;
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-export { app, auth, db, storage };
+export { db, auth };
