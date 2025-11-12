@@ -25,6 +25,8 @@ import { TeamManagement } from './TeamManagement';
 import { JuryManagement } from './JuryManagement';
 import { AddJuryDialog } from './AddJuryDialog';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { TopTeamsBarChart } from './charts/TopTeamsBarChart';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 
 export function AdminDashboard() {
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
@@ -111,10 +113,11 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="scores">
+      <Tabs defaultValue="dashboard">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <TabsList>
-            <TabsTrigger value="scores">Leaderboard</TabsTrigger>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
             <TabsTrigger value="teams">Team Management</TabsTrigger>
             <TabsTrigger value="juries">Jury Management</TabsTrigger>
           </TabsList>
@@ -126,7 +129,24 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        <TabsContent value="scores" className="mt-4">
+        <TabsContent value="dashboard" className="mt-4">
+           {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Top 10 Teams</CardTitle>
+                <CardDescription>Bar chart showing the average scores for the top 10 performing teams.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TopTeamsBarChart data={combinedData} />
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        <TabsContent value="leaderboard" className="mt-4">
            {isLoading ? (
             <div className="flex items-center justify-center p-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />

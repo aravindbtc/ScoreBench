@@ -26,6 +26,7 @@ import { generateConsolidatedFeedback } from '@/ai/flows/generate-consolidated-f
 import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { ScoreRadarChart } from './charts/ScoreRadarChart';
 
 interface ScoreTableProps {
   data: CombinedScoreData[];
@@ -104,7 +105,7 @@ const ConsolidatedFeedback = ({ scores, teamId }: { scores: TeamScores, teamId: 
     const hasAllPanels = scores.panel1 && scores.panel2 && scores.panel3;
 
     return (
-        <Card className="md:col-span-3 bg-muted/30 border-dashed">
+        <Card className="col-span-1 md:col-span-2 bg-muted/30 border-dashed">
             <CardHeader>
                 <CardTitle className="text-lg">Consolidated AI Summary</CardTitle>
             </CardHeader>
@@ -137,6 +138,10 @@ export function ScoreTable({ data, onDeleteRequest }: ScoreTableProps) {
   }
   return (
     <Card>
+      <CardHeader>
+        <CardTitle>Leaderboard</CardTitle>
+        <p className="text-muted-foreground">Detailed scores for all participating teams.</p>
+      </CardHeader>
       <Table>
         <TableHeader>
           <TableRow>
@@ -182,10 +187,15 @@ export function ScoreTable({ data, onDeleteRequest }: ScoreTableProps) {
                 <TableRow>
                   <TableCell colSpan={5} className="p-0">
                      <AccordionContent>
-                      <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <PanelScoreDetails panelNo={1} score={item.scores.panel1} />
-                        <PanelScoreDetails panelNo={2} score={item.scores.panel2} />
-                        <PanelScoreDetails panelNo={3} score={item.scores.panel3} />
+                      <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <PanelScoreDetails panelNo={1} score={item.scores.panel1} />
+                            <PanelScoreDetails panelNo={2} score={item.scores.panel2} />
+                            <PanelScoreDetails panelNo={3} score={item.scores.panel3} />
+                        </div>
+                        <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                            <ScoreRadarChart scores={item.scores} />
+                        </div>
                         <ConsolidatedFeedback scores={item.scores} teamId={item.id} />
                       </div>
                     </AccordionContent>
