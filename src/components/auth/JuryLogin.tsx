@@ -88,10 +88,19 @@ export function JuryLogin() {
             </SelectContent>
           </Select>
         )}
-         {status === 'success' && juries && juries.length === 0 && (
+         {(status === 'success' && juries && juries.length === 0) && (
           <div className='text-center text-sm text-muted-foreground p-4 border rounded-md'>
             <p>No jury panels found.</p>
             <p>An admin needs to set them up.</p>
+            <Button onClick={handleSeed} disabled={isSeeding} variant="link" size="sm" className="mt-2">
+              {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Seed Demo Data'}
+            </Button>
+          </div>
+        )}
+         {status === 'error' && (
+           <div className='text-center text-sm text-destructive p-4 border border-destructive/50 rounded-md'>
+            <p>Could not connect to the database.</p>
+            <p>Please ensure Firestore is enabled.</p>
             <Button onClick={handleSeed} disabled={isSeeding} variant="link" size="sm" className="mt-2">
               {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Seed Demo Data'}
             </Button>

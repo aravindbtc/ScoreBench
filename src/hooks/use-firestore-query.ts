@@ -18,12 +18,18 @@ interface InternalQuery extends Query {
   }
 }
 
-export function useFirestoreQuery<T>(query: Query) {
+export function useFirestoreQuery<T>(query: Query | null) {
   const [data, setData] = useState<T[] | null>(null);
   const [status, setStatus] = useState<QueryStatus>('loading');
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    if (!query) {
+      setStatus('success');
+      setData([]);
+      return;
+    }
+
     setStatus('loading');
     const unsubscribe = onSnapshot(
       query,
