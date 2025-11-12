@@ -55,8 +55,6 @@ export async function addJury(jury: Omit<Jury, 'id'>) {
       return { success: false, message: `Panel number ${jury.panelNo} already exists.` };
     }
     await addDoc(juriesCollection, jury);
-    revalidatePath('/admin');
-    revalidatePath('/');
     return { success: true, message: `Jury "${jury.name}" added successfully.` };
   } catch (error) {
     console.error('Error adding jury:', error);
@@ -70,8 +68,6 @@ export async function deleteJury(juryId: string) {
   try {
     const juryDocRef = doc(db, 'juries', juryId);
     await deleteDoc(juryDocRef);
-revalidatePath('/admin');
-revalidatePath('/');
     return { success: true, message: 'Jury deleted successfully.' };
   } catch (error) {
     console.error('Error deleting jury:', error);
@@ -85,7 +81,6 @@ export async function addTeam(team: Omit<Team, 'id'>) {
   try {
     const teamsCollection = collection(db, 'teams');
     await addDoc(teamsCollection, team);
-    revalidatePath('/admin');
     return { success: true, message: `Team "${team.teamName}" added successfully.` };
   } catch (error) {
     console.error('Error adding team:', error);
@@ -109,8 +104,6 @@ export async function deleteTeam(teamId: string) {
     
     await batch.commit();
 
-    revalidatePath('/admin');
-    revalidatePath('/jury');
     return { success: true, message: 'Team and associated scores deleted.' };
   } catch (error) {
     console.error('Error deleting team:', error);
@@ -134,9 +127,6 @@ export async function uploadTeams(teams: Omit<Team, 'id'>[]) {
     });
 
     await batch.commit();
-    revalidatePath('/admin/upload');
-    revalidatePath('/admin');
-    revalidatePath('/jury');
     return { success: true, message: `${teams.length} teams uploaded successfully.` };
   } catch (error) {
     console.error('Error uploading teams:', error);
