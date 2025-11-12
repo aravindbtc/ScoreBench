@@ -40,7 +40,7 @@ export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
     resolver: zodResolver(jurySchema),
     defaultValues: {
       name: '',
-      panelNo: undefined,
+      panelNo: '' as any,
     },
   });
 
