@@ -2,15 +2,13 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { uploadImageAndGetUrl } from '@/lib/actions';
 
 interface ImageUploadFormProps {
   onUploadComplete: (url: string) => void;
@@ -19,17 +17,25 @@ interface ImageUploadFormProps {
 export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setSelectedFile(event.target.files[0]);
+      const file = event.target.files[0];
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: 'File Too Large',
+          description: 'Please select an image file smaller than 5MB.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setSelectedFile(file);
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile) {
       toast({
         title: 'No File Selected',
@@ -40,67 +46,49 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
     }
 
     setIsUploading(true);
-    setProgress(0);
 
-    const fileRef = ref(storage, `login-backgrounds/${Date.now()}-${selectedFile.name}`);
-    const uploadTask = uploadBytesResumable(fileRef, selectedFile);
+    try {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
 
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const currentProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setProgress(currentProgress);
-        console.log(`Upload is ${currentProgress}% done`);
-      },
-      (error) => {
+        const result = await uploadImageAndGetUrl(formData);
+
+        if (result.success && result.url) {
+            onUploadComplete(result.url);
+        } else {
+            throw new Error(result.message || 'An unknown error occurred during upload.');
+        }
+
+    } catch (error) {
         console.error('Upload failed:', error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
         toast({
           title: 'Upload Failed',
-          description: `An error occurred: ${error.code}. Check the console and ensure your Firebase Storage rules and CORS are configured correctly.`,
+          description: `An error occurred: ${errorMessage}.`,
           variant: 'destructive',
         });
+    } finally {
         setIsUploading(false);
         setSelectedFile(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-      },
-      () => {
-        console.log('Upload complete');
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          console.log('File available at', downloadURL);
-          onUploadComplete(downloadURL);
-          setIsUploading(false);
-          setSelectedFile(null);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-        });
-      }
-    );
+    }
   };
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="image-file">Choose an image</Label>
+        <Label htmlFor="image-file">Choose an image (max 5MB)</Label>
         <Input
           id="image-file"
           type="file"
-          accept="image/*"
+          accept="image/png, image/jpeg, image/gif, image/webp"
           ref={fileInputRef}
           onChange={handleFileChange}
           disabled={isUploading}
         />
       </div>
-
-      {isUploading && (
-        <div className="space-y-2">
-            <Label>Upload Progress</Label>
-            <Progress value={progress} className="w-full" />
-            <p className="text-sm text-muted-foreground text-center">{Math.round(progress)}%</p>
-        </div>
-      )}
 
       {selectedFile && !isUploading && (
         <Alert>
@@ -116,7 +104,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
         ) : (
           <UploadCloud className="mr-2 h-4 w-4" />
         )}
-        Upload Image
+        {isUploading ? 'Uploading...' : 'Upload Image'}
       </Button>
     </div>
   );

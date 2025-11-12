@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -15,6 +16,8 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { getAdminApp } from './firebase-admin';
+import { getStorage } from 'firebase-admin/storage';
 import type { Team, Score, ImagePlaceholder, Jury } from './types';
 import { PlaceHolderImages } from './placeholder-images';
 
@@ -256,5 +259,42 @@ export async function seedInitialData() {
   } catch (error) {
     console.error("Error seeding data:", error);
     return { success: false, message: "Failed to seed initial data." };
+  }
+}
+
+export async function uploadImageAndGetUrl(formData: FormData) {
+  'use server';
+
+  const file = formData.get('file') as File;
+  if (!file) {
+    return { success: false, message: 'No file provided.' };
+  }
+
+  try {
+    const app = getAdminApp();
+    const bucket = getStorage(app).bucket();
+    
+    const fileName = `login-backgrounds/${Date.now()}-${file.name}`;
+    const fileRef = bucket.file(fileName);
+
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+    await fileRef.save(fileBuffer, {
+      metadata: {
+        contentType: file.type,
+      },
+    });
+
+    const [publicUrl] = await fileRef.getSignedUrl({
+        action: 'read',
+        expires: '01-01-2500' // Far-future expiration date
+    });
+
+    return { success: true, url: publicUrl, message: 'Image uploaded successfully.' };
+
+  } catch (error) {
+    console.error('Server-side upload failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    return { success: false, message: errorMessage };
   }
 }
