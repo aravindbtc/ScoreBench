@@ -12,14 +12,11 @@ import {
   deleteDoc,
   query,
   where,
+  getDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Team, Score, ImagePlaceholder, Jury } from './types';
 import { PlaceHolderImages } from './placeholder-images';
-import { getAdminApp } from './firebase-admin';
-
-// Re-importing getDoc from the admin SDK specifically for server actions
-import { getDoc as getAdminDoc, setDoc as setAdminDoc } from 'firebase-admin/firestore';
 
 export async function verifyAdminPassword(password: string) {
   'use server';
@@ -32,9 +29,8 @@ export async function verifyAdminPassword(password: string) {
 export async function updateLoginBackground(imageUrl: string) {
     'use server';
     try {
-        const adminDb = getAdminApp().firestore();
-        const configDocRef = adminDb.collection('appConfig').doc('loginBackground');
-        await setAdminDoc(configDocRef, { imageUrl }, { merge: true });
+        const configDocRef = doc(db, 'appConfig', 'loginBackground');
+        await setDoc(configDocRef, { imageUrl }, { merge: true });
         revalidatePath('/');
         revalidatePath('/admin/upload-image');
         return { success: true, message: 'Background updated successfully.' };
@@ -45,24 +41,15 @@ export async function updateLoginBackground(imageUrl: string) {
     }
 }
 
-export async function getLoginBackground(): Promise<ImagePlaceholder | null> {
-    'use server';
-    try {
-        const adminDb = getAdminApp().firestore();
-        const configDocRef = adminDb.collection('appConfig').doc('loginBackground');
-        const docSnap = await getAdminDoc(configDocRef);
-
-        if (docSnap.exists()) {
-            return docSnap.data() as ImagePlaceholder;
-        } else {
-            // Fallback to local placeholder if not in DB
-            return PlaceHolderImages.find((img) => img.id === 'login-background') || null;
-        }
-    } catch (error) {
-        console.error("Error getting login background:", error);
-        // On error, always return the local fallback
-        return PlaceHolderImages.find((img) => img.id === 'login-background') || null;
-    }
+export function getLoginBackground(): ImagePlaceholder | null {
+  try {
+    // Fallback to local placeholder if not in DB
+    return PlaceHolderImages.find((img) => img.id === 'login-background') || null;
+  } catch (error) {
+    console.error("Error getting login background:", error);
+    // On error, always return the local fallback
+    return PlaceHolderImages.find((img) => img.id === 'login-background') || null;
+  }
 }
 
 

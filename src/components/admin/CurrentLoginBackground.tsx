@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { ImagePlaceholder } from '@/lib/types';
+import type { ImagePlaceholder } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -24,35 +24,12 @@ export function CurrentLoginBackground() {
     const router = useRouter();
 
     useEffect(() => {
-        const configDocRef = doc(db, 'appConfig', 'loginBackground');
-        
-        const unsubscribe = onSnapshot(configDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data() as ImagePlaceholder;
-                setImageUrl(data.imageUrl);
-            } else {
-                // If doc doesn't exist, use the local fallback
-                const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
-                setImageUrl(fallback?.imageUrl || null);
-            }
-            setLoading(false);
-        }, (error) => {
-            console.error("Failed to fetch current background in real-time", error);
-
-            const contextualError = new FirestorePermissionError({
-              operation: 'get',
-              path: configDocRef.path,
-            });
-            errorEmitter.emit('permission-error', contextualError);
-
-            // Fallback on error
-            const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
-            setImageUrl(fallback?.imageUrl || null);
-            setLoading(false);
-        });
-
-        return () => unsubscribe(); // Cleanup listener on unmount
-    }, [toast]);
+        // Since we are moving away from Firestore for this,
+        // we can just load the image from the local JSON file.
+        const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
+        setImageUrl(fallback?.imageUrl || null);
+        setLoading(false);
+    }, []);
 
     const handleCopy = () => {
         if (imageUrl) {
