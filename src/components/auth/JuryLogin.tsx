@@ -1,10 +1,9 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInAnonymously } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,18 +15,22 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { useFirestoreQuery } from '@/hooks/use-firestore-query';
-import { collection } from 'firebase/firestore';
 import type { Jury } from '@/lib/types';
+import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export function JuryLogin() {
   const [selectedJury, setSelectedJury] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const auth = useAuth();
+  const firestore = useFirestore();
 
-  const juriesQuery = useMemo(() => collection(db, 'juries'), []);
-  const { data: juries, status } = useFirestoreQuery<Jury>(juriesQuery);
+  const juriesQuery = useMemoFirebase(() => collection(firestore, 'juries'), [firestore]);
+  const { data: juries, isLoading: statusIsLoading, error } = useCollection<Jury>(juriesQuery);
+  const status = error ? 'error' : statusIsLoading ? 'loading' : 'success';
+
 
   const handleLogin = async () => {
     if (!selectedJury) {

@@ -1,9 +1,8 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useFirestoreQuery } from '@/hooks/use-firestore-query';
 import { collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import type { Team, TeamScores } from '@/lib/types';
 import { ScoreForm } from './ScoreForm';
 import {
@@ -15,10 +14,12 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 
 export function JuryDashboard() {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [juryPanel, setJuryPanel] = useState<number | null>(null);
+  const firestore = useFirestore();
 
   useEffect(() => {
     const panel = localStorage.getItem('juryPanel');
@@ -27,11 +28,11 @@ export function JuryDashboard() {
     }
   }, []);
 
-  const teamsQuery = useMemo(() => collection(db, 'teams'), []);
-  const { data: teams, status: teamsStatus } = useFirestoreQuery<Team>(teamsQuery);
+  const teamsQuery = useMemoFirebase(() => collection(firestore, 'teams'), [firestore]);
+  const { data: teams, isLoading: teamsStatus } = useCollection<Team>(teamsQuery);
 
-  const scoresQuery = useMemo(() => collection(db, 'scores'), []);
-  const { data: scores, status: scoresStatus } = useFirestoreQuery<TeamScores>(scoresQuery);
+  const scoresQuery = useMemoFirebase(() => collection(firestore, 'scores'), [firestore]);
+  const { data: scores, isLoading: scoresStatus } = useCollection<TeamScores>(scoresQuery);
 
   const selectedTeam = useMemo(() => {
     return teams?.find((t) => t.id === selectedTeamId) || null;
@@ -42,7 +43,7 @@ export function JuryDashboard() {
   }, [scores, selectedTeamId]);
 
 
-  if (teamsStatus === 'loading' || scoresStatus === 'loading' || !juryPanel) {
+  if (teamsStatus || scoresStatus || !juryPanel) {
     return (
         <Card>
             <CardHeader>

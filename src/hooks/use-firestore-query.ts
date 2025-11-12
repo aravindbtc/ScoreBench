@@ -25,8 +25,11 @@ export function useFirestoreQuery<T>(query: Query | null) {
 
   useEffect(() => {
     if (!query) {
-      setStatus('success');
-      setData([]);
+      // Return success with empty array if query is null, but only after initial loading state
+      if (status !== 'loading') {
+        setStatus('success');
+        setData([]);
+      }
       return;
     }
 
@@ -48,6 +51,7 @@ export function useFirestoreQuery<T>(query: Query | null) {
         });
 
         setStatus('success');
+        setError(null);
       },
       (err: FirestoreError) => {
         console.error('Firestore query error:', err);

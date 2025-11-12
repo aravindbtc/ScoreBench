@@ -2,13 +2,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useFirestoreQuery } from '@/hooks/use-firestore-query';
 import { collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import type { Team, TeamScores, CombinedScoreData, Jury } from '@/lib/types';
 import { ScoreTable } from './ScoreTable';
 import { Button } from '@/components/ui/button';
-import { Download, Loader2, PlusCircle, Trash2, UserPlus, Users } from 'lucide-react';
+import { Download, Loader2, PlusCircle, Trash2, UserPlus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { AddTeamDialog } from './AddTeamDialog';
 import {
@@ -27,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamManagement } from './TeamManagement';
 import { JuryManagement } from './JuryManagement';
 import { AddJuryDialog } from './AddJuryDialog';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 
 export function AdminDashboard() {
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
@@ -34,15 +33,16 @@ export function AdminDashboard() {
   const [itemToDelete, setItemToDelete] = useState<{type: 'team' | 'jury', data: any} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
-  const teamsQuery = useMemo(() => collection(db, 'teams'), []);
-  const { data: teams, status: teamsStatus } = useFirestoreQuery<Team>(teamsQuery);
+  const teamsQuery = useMemoFirebase(() => collection(firestore, 'teams'), [firestore]);
+  const { data: teams, isLoading: teamsLoading } = useCollection<Team>(teamsQuery);
 
-  const scoresQuery = useMemo(() => collection(db, 'scores'), []);
-  const { data: scores, status: scoresStatus } = useFirestoreQuery<TeamScores>(scoresQuery);
+  const scoresQuery = useMemoFirebase(() => collection(firestore, 'scores'), [firestore]);
+  const { data: scores, isLoading: scoresLoading } = useCollection<TeamScores>(scoresQuery);
 
-  const juriesQuery = useMemo(() => collection(db, 'juries'), []);
-  const { data: juries, status: juriesStatus } = useFirestoreQuery<Jury>(juriesQuery);
+  const juriesQuery = useMemoFirebase(() => collection(firestore, 'juries'), [firestore]);
+  const { data: juries, isLoading: juriesLoading } = useCollection<Jury>(juriesQuery);
 
   const combinedData: CombinedScoreData[] = useMemo(() => {
     if (!teams || !scores) return [];
@@ -104,7 +104,7 @@ export function AdminDashboard() {
     setItemToDelete(null);
   };
 
-  const isLoading = teamsStatus === 'loading' || scoresStatus === 'loading' || juriesStatus === 'loading';
+  const isLoading = teamsLoading || scoresLoading || juriesLoading;
 
   return (
     <div className="space-y-4">
