@@ -46,7 +46,7 @@ export function CustomizeLoginForm() {
     form.setValue('imageUrl', url, { shouldValidate: true });
     toast({
       title: 'Upload Complete!',
-      description: "Image URL has been set. Click 'Save Background' to apply.",
+      description: "Image URL is now visible in the input field. Click 'Save Background' to apply.",
     });
   };
   
