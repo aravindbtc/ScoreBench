@@ -17,7 +17,6 @@ import {
 import { db } from './firebase';
 import type { Team, Score, ImagePlaceholder, Jury } from './types';
 import { PlaceHolderImages } from './placeholder-images';
-import { getAdminApp } from './firebase-admin';
 
 export async function verifyAdminPassword(password: string) {
   'use server';
@@ -173,43 +172,6 @@ export async function submitScore(
   }
 }
 
-export async function getLoginBackground(): Promise<ImagePlaceholder> {
-  'use server';
-  try {
-    const adminDb = getAdminApp().firestore();
-    const configDocRef = adminDb.collection('appConfig').doc('loginBackground');
-    const docSnap = await configDocRef.get();
-    
-    if (docSnap.exists) {
-      return docSnap.data() as ImagePlaceholder;
-    }
-  } catch (error) {
-    console.error("Error fetching login background from Firestore:", error);
-  }
-  // Fallback to the default from JSON file if Firestore fetch fails or doc doesn't exist
-  return PlaceHolderImages.find((img) => img.id === 'login-background')!;
-}
-
-
-export async function updateLoginBackground(data: { imageUrl: string }) {
-  'use server';
-  try {
-    const adminDb = getAdminApp().firestore();
-    const configDocRef = adminDb.collection('appConfig').doc('loginBackground');
-    
-    // Using set with merge: true will create or update the document.
-    await configDocRef.set({ imageUrl: data.imageUrl }, { merge: true });
-    
-    revalidatePath('/');
-    revalidatePath('/admin/upload-image');
-    return { success: true, message: 'Login background updated successfully!' };
-  } catch (error) {
-    console.error("Error updating login background:", error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return { success: false, message: `Failed to update: ${errorMessage}` };
-  }
-}
-
 
 // Action to pre-populate Firebase with initial data for demonstration purposes
 export async function seedInitialData() {
@@ -268,3 +230,4 @@ export async function seedInitialData() {
     return { success: false, message: "Failed to seed initial data." };
   }
 }
+

@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Firestore Security Rules for HackEval application.
  *
@@ -10,6 +11,7 @@
  * - /teams/{teamId}: Stores information about each team.
  * - /scores/{teamId}: Stores scores given to a team by jury members.
  * - /juries/{juryId}: Stores information about jury members.
+ * - /appConfig/loginBackground: Stores configuration for the app, like the login background URL.
  *
  * Key Security Decisions:
  * - Jury member access to scoring is granted via Anonymous Authentication, with no reliance on custom claims or complex role hierarchies.
@@ -80,6 +82,19 @@ service cloud.firestore {
       allow update: if true;
       allow delete: if true;
     }
+
+    /**
+     * @description Grants access to app configuration data.
+     * @path /appConfig/{docId}
+     * @allow (get, list) Allow anyone to read app configuration.
+     * @allow (write) Allow any authenticated user to write.
+     * @principle Public read, but restricted write for admin functionality.
+     */
+    match /appConfig/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn(); // For simplicity, any signed-in user can write. In prod, you'd check a custom claim.
+    }
+
 
     // Helper function to determine if the user is signed in.
     function isSignedIn() {

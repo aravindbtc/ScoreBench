@@ -3,32 +3,49 @@
 
 import { useState, useEffect } from 'react';
 import Image from "next/image";
-import { getLoginBackground } from "@/lib/actions";
 import { Skeleton } from '../ui/skeleton';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { ImagePlaceholder } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 export function CurrentLoginBackground() {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const router = useRouter();
 
     useEffect(() => {
-      async function fetchBg() {
-        try {
-          const bg = await getLoginBackground();
-          setImageUrl(bg.imageUrl);
-        } catch (e) {
-          console.error("Failed to fetch current background", e);
-        } finally {
-          setLoading(false);
-        }
-      }
-      fetchBg();
-    }, []);
+        const configDocRef = doc(db, 'appConfig', 'loginBackground');
+        
+        const unsubscribe = onSnapshot(configDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data() as ImagePlaceholder;
+                setImageUrl(data.imageUrl);
+            } else {
+                // If doc doesn't exist, use the local fallback
+                const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
+                setImageUrl(fallback?.imageUrl || null);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error("Failed to fetch current background in real-time", error);
+            toast({
+                title: 'Error',
+                description: 'Could not load current background. Check console for details.',
+                variant: 'destructive'
+            });
+            setLoading(false);
+        });
+
+        return () => unsubscribe(); // Cleanup listener on unmount
+    }, [toast]);
 
     const handleCopy = () => {
         if (imageUrl) {
@@ -61,6 +78,7 @@ export function CurrentLoginBackground() {
                     fill
                     className="object-cover"
                     sizes="(max-width: 1024px) 100vw, 33vw"
+                    priority
                 />
             </div>
             <div className="space-y-2">
@@ -75,3 +93,4 @@ export function CurrentLoginBackground() {
         </div>
     );
 }
+

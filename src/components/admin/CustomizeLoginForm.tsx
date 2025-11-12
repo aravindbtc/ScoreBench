@@ -11,10 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import { updateLoginBackground, getLoginBackground } from '@/lib/actions';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter } from 'next/navigation';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { ImagePlaceholder } from '@/lib/types';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const formSchema = z.object({
   imageUrl: z.string().url('Please enter a valid URL.').or(z.literal('')),
@@ -35,11 +38,22 @@ export function CustomizeLoginForm() {
   });
 
   useEffect(() => {
-    getLoginBackground().then(bg => {
-      if (bg?.imageUrl) {
-        form.setValue('imageUrl', bg.imageUrl);
-      }
-    });
+    async function getCurrentBg() {
+        const configDocRef = doc(db, 'appConfig', 'loginBackground');
+        try {
+            const docSnap = await getDoc(configDocRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data() as ImagePlaceholder;
+                form.setValue('imageUrl', data.imageUrl);
+            } else {
+                 const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
+                 if(fallback) form.setValue('imageUrl', fallback.imageUrl);
+            }
+        } catch (error) {
+            console.error("Error getting document:", error);
+        }
+    }
+    getCurrentBg();
   }, [form]);
 
   const handleUploadComplete = (url: string) => {
@@ -60,22 +74,24 @@ export function CustomizeLoginForm() {
         return;
     }
     setIsSaving(true);
-    const result = await updateLoginBackground(data as { imageUrl: string });
-    if (result.success) {
-      toast({
-        title: 'Success!',
-        description: 'The login background has been updated.',
-      });
-      // Refresh the page to show the new current background
-      router.refresh();
-    } else {
-      toast({
-        title: 'Error',
-        description: result.message,
-        variant: 'destructive',
-      });
+    try {
+        const configDocRef = doc(db, 'appConfig', 'loginBackground');
+        await setDoc(configDocRef, { imageUrl: data.imageUrl }, { merge: true });
+        toast({
+            title: 'Success!',
+            description: 'The login background has been updated.',
+        });
+        // The real-time listener in CurrentLoginBackground will handle the UI update.
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+        toast({
+            title: 'Error',
+            description: `Failed to update: ${message}`,
+            variant: 'destructive',
+        });
+    } finally {
+        setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   const imageUrl = form.watch('imageUrl');
@@ -118,3 +134,4 @@ export function CustomizeLoginForm() {
     </Form>
   );
 }
+
