@@ -7,25 +7,44 @@ function initializeAdminApp() {
     const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
 
     if (!serviceAccount) {
-        throw new Error('The FIREBASE_SERVICE_ACCOUNT environment variable is not set. This is required for server-side Firebase operations.');
+        // This error should guide the user to set up the environment variable.
+        // It's critical for any server-side Firebase Admin operations.
+        throw new Error('The FIREBASE_SERVICE_ACCOUNT environment variable is not set. Please add it to your .env file.');
     }
 
-    const parsedServiceAccount = JSON.parse(serviceAccount);
+    // Safeguard against malformed JSON
+    let parsedServiceAccount;
+    try {
+        parsedServiceAccount = JSON.parse(serviceAccount);
+    } catch (e) {
+        throw new Error('The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON.');
+    }
+
     const appName = 'firebase-admin-app-for-studio';
 
-    if (admin.apps.some(a => a?.name === appName)) {
-        return admin.app(appName);
+    // Return the existing app if it has already been initialized
+    const existingApp = admin.apps.find(a => a?.name === appName);
+    if (existingApp) {
+        return existingApp;
     }
     
+    // Initialize the new app
     return admin.initializeApp({
         credential: admin.credential.cert(parsedServiceAccount),
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
     }, appName);
 }
 
+let adminApp: admin.app.App | null = null;
+
 // We wrap the initialization in a getter function.
 // This prevents the error from being thrown on app startup if the admin app is not immediately needed.
+// It also ensures we only initialize the app once (singleton pattern).
 export function getAdminApp() {
-    // This will only be called by server actions that need it, like the failed upload attempt.
-    return initializeAdminApp();
+    if (!adminApp) {
+        adminApp = initializeAdminApp();
+    }
+    return adminApp;
 }
+
+    

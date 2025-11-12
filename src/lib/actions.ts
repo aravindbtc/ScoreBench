@@ -16,6 +16,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { getAdminApp } from './firebase-admin';
 import type { Team, Score, ImagePlaceholder, Jury } from './types';
 import { PlaceHolderImages } from './placeholder-images';
 
@@ -175,15 +176,18 @@ export async function submitScore(
 
 export async function getLoginBackground(): Promise<ImagePlaceholder> {
   try {
-    const configDocRef = doc(db, 'appConfig', 'loginBackground');
-    const docSnap = await getDoc(configDocRef);
-    if (docSnap.exists()) {
+    // Use the Admin SDK for server-side fetches to bypass security rules
+    const adminDb = getAdminApp().firestore();
+    const configDocRef = adminDb.doc('appConfig/loginBackground');
+    const docSnap = await configDocRef.get();
+    
+    if (docSnap.exists) {
       return docSnap.data() as ImagePlaceholder;
     }
   } catch (error) {
     console.error("Error fetching login background from Firestore:", error);
   }
-  // Fallback to the default from JSON file
+  // Fallback to the default from JSON file if Firestore fetch fails or doc doesn't exist
   return PlaceHolderImages.find((img) => img.id === 'login-background')!;
 }
 
@@ -191,11 +195,16 @@ export async function getLoginBackground(): Promise<ImagePlaceholder> {
 export async function updateLoginBackground(data: { imageUrl: string }) {
   'use server';
   try {
-    const configDocRef = doc(db, 'appConfig', 'loginBackground');
-    await updateDoc(configDocRef, { imageUrl: data.imageUrl });
+    // Use the Admin SDK for server-side writes
+    const adminDb = getAdminApp().firestore();
+    const configDocRef = adminDb.doc('appConfig/loginBackground');
+    await configDocRef.update({ imageUrl: data.imageUrl });
+    
     revalidatePath('/');
+    revalidatePath('/admin/upload-image');
     return { success: true, message: 'Login background updated successfully!' };
   } catch (error) {
+    console.error("Error updating login background:", error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return { success: false, message: `Failed to update: ${errorMessage}` };
   }
@@ -259,3 +268,5 @@ export async function seedInitialData() {
     return { success: false, message: "Failed to seed initial data." };
   }
 }
+
+    
