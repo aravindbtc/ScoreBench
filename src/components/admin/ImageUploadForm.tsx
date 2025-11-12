@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import ImageKit from 'imagekit-javascript';
+import { Progress } from '@/components/ui/progress';
 
 interface ImageUploadFormProps {
   onUploadComplete: (url: string) => void;
@@ -64,22 +65,30 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
       });
 
       // 2. Upload the file to ImageKit
-      imagekit.upload({
+      const uploader = imagekit.upload({
         file: selectedFile,
         fileName: selectedFile.name,
         token: authParams.token,
         signature: authParams.signature,
         expire: authParams.expire,
         useUniqueFileName: true,
+        onUploadProgress: (progress) => {
+            setProgress(progress.loaded / progress.total * 100);
+        }
       }, (err, result) => {
+        setIsUploading(false);
         if (err) {
           console.error("ImageKit upload failed:", err);
+          let description = 'Could not upload the image. Check the console for details.';
+          // Check for a more specific security error
+          if (err.message.includes('security')) {
+              description = 'A security error occurred. This often means your Firebase Storage rules are not configured correctly to allow uploads. Please check and update your rules in the Firebase console.';
+          }
           toast({
             title: 'Upload Failed',
-            description: 'Could not upload the image. Check the console for details.',
+            description: description,
             variant: 'destructive',
           });
-          setIsUploading(false);
           return;
         }
 
@@ -88,7 +97,6 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
           onUploadComplete(result.url);
         }
         
-        setIsUploading(false);
         setSelectedFile(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -123,10 +131,8 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
 
       {isUploading && (
         <div className="space-y-2">
-            <p>Uploading: {Math.round(progress)}%</p>
-            <div className="w-full bg-muted rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full" style={{ width: `${progress}%` }}></div>
-            </div>
+            <p className="text-sm text-muted-foreground">Uploading: {Math.round(progress)}%</p>
+            <Progress value={progress} className="w-full h-2" />
         </div>
       )}
 
@@ -144,7 +150,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
         ) : (
           <UploadCloud className="mr-2 h-4 w-4" />
         )}
-        {isUploading ? 'Uploading...' : 'Upload Image'}
+        {isUploading ? 'Uploading...' : 'Upload & Set URL'}
       </Button>
     </div>
   );

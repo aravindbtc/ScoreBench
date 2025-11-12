@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
-  imageUrl: z.string().url('Please enter a valid URL.'),
+  imageUrl: z.string().url('Please enter a valid URL.').or(z.literal('')),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -51,8 +51,16 @@ export function CustomizeLoginForm() {
   };
   
   const onSubmit = async (data: FormValues) => {
+    if (!data.imageUrl) {
+        toast({
+            title: 'Error',
+            description: 'Image URL cannot be empty.',
+            variant: 'destructive',
+        });
+        return;
+    }
     setIsSaving(true);
-    const result = await updateLoginBackground(data);
+    const result = await updateLoginBackground(data as { imageUrl: string });
     if (result.success) {
       toast({
         title: 'Success!',
@@ -91,7 +99,7 @@ export function CustomizeLoginForm() {
                   <FormItem>
                     <Label htmlFor="imageUrl">Image URL</Label>
                     <FormControl>
-                      <Input id="imageUrl" placeholder="https://example.com/image.jpg" {...field} />
+                      <Input id="imageUrl" placeholder="Upload an image or paste a URL here" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
