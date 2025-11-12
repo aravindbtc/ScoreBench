@@ -16,17 +16,19 @@ import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter } from 'next/navigation';
 
-const urlSchema = z.object({
+const formSchema = z.object({
   imageUrl: z.string().url('Please enter a valid URL.'),
 });
+
+type FormValues = z.infer<typeof formSchema>;
 
 export function CustomizeLoginForm({ currentImageUrl }: { currentImageUrl: string }) {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
-  const form = useForm<{ imageUrl: string }>({
-    resolver: zodResolver(urlSchema),
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       imageUrl: currentImageUrl || '',
     },
@@ -40,7 +42,7 @@ export function CustomizeLoginForm({ currentImageUrl }: { currentImageUrl: strin
     });
   };
   
-  const onSubmit = async (data: { imageUrl: string }) => {
+  const onSubmit = async (data: FormValues) => {
     setIsSaving(true);
     const result = await updateLoginBackground(data);
     if (result.success) {
@@ -63,42 +65,40 @@ export function CustomizeLoginForm({ currentImageUrl }: { currentImageUrl: strin
   const imageUrl = form.watch('imageUrl');
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="upload" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="upload">Upload Image</TabsTrigger>
-          <TabsTrigger value="url">Set from URL</TabsTrigger>
-        </TabsList>
-        <TabsContent value="upload" className="mt-6">
-            <ImageUploadForm onUploadComplete={handleUploadComplete} />
-        </TabsContent>
-        <TabsContent value="url" className="mt-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="imageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label htmlFor="imageUrl">Image URL</Label>
-                      <FormControl>
-                        <Input id="imageUrl" placeholder="https://example.com/image.jpg" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </form>
-            </Form>
-        </TabsContent>
-      </Tabs>
-      
-      <div className="pt-6 border-t">
-         <Button onClick={form.handleSubmit(onSubmit)} disabled={isSaving || !imageUrl}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Background
-          </Button>
-      </div>
-    </div>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Tabs defaultValue="upload" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="upload">Upload Image</TabsTrigger>
+            <TabsTrigger value="url">Set from URL</TabsTrigger>
+          </TabsList>
+          <TabsContent value="upload" className="mt-6">
+              <ImageUploadForm onUploadComplete={handleUploadComplete} />
+          </TabsContent>
+          <TabsContent value="url" className="mt-6">
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <Label htmlFor="imageUrl">Image URL</Label>
+                    <FormControl>
+                      <Input id="imageUrl" placeholder="https://example.com/image.jpg" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+          </TabsContent>
+        </Tabs>
+        
+        <div className="pt-6 border-t">
+           <Button type="submit" disabled={isSaving || !imageUrl}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Background
+            </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
