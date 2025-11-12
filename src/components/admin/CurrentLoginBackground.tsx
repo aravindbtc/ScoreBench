@@ -36,11 +36,22 @@ export function CurrentLoginBackground() {
             setLoading(false);
         }, (error) => {
             console.error("Failed to fetch current background in real-time", error);
-            toast({
-                title: 'Error',
-                description: 'Could not load current background. Check console for details.',
-                variant: 'destructive'
-            });
+            // This is the key part for the "offline" error.
+            if (error.code === 'unavailable' || error.message.includes('offline')) {
+                 toast({
+                    title: 'Firestore Connection Error',
+                    description: 'Could not connect to the database. It might not be created yet. Using local fallback image.',
+                    variant: 'destructive',
+                });
+                const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
+                setImageUrl(fallback?.imageUrl || null);
+            } else {
+                toast({
+                    title: 'Error',
+                    description: 'Could not load current background. Check console for details.',
+                    variant: 'destructive'
+                });
+            }
             setLoading(false);
         });
 
@@ -93,4 +104,3 @@ export function CurrentLoginBackground() {
         </div>
     );
 }
-

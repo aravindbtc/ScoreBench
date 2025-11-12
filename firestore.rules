@@ -28,71 +28,44 @@ service cloud.firestore {
     /**
      * @description Grants access to team data.
      * @path /teams/{teamId}
-     * @allow (get) Allow anyone to read team information.
-     * @allow (create) Allow anyone to create team information. Only for testing purposes.
-     * @allow (update) Allow anyone to update team information. Only for testing purposes.
-     * @allow (delete) Allow anyone to delete team information. Only for testing purposes.
-     * @deny (list) Deny anyone from listing team information.
-     * @principle Public read access with write disabled for prototyping.
+     * @allow (read) Allow any authenticated user to read team information.
+     * @allow (list) Allow any authenticated user to list team information.
+     * @allow (write) Allow any authenticated user to write.
      */
     match /teams/{teamId} {
-      allow get: if true;
-      allow list: if false;
-
-      //In Prototyping Mode, allow create, update, delete for rapid iteration.  In production, these would be protected.
-      allow create: if true;
-      allow update: if true;
-      allow delete: if true;
+      allow read, list, write: if isSignedIn();
     }
 
     /**
      * @description Grants jury members (via anonymous auth) access to create, read, update and delete scores.
      * @path /scores/{teamId}
-     * @allow (create) Allow any authenticated user (jury member) to create a score.
-     * @allow (get) Allow anyone to read a score.
-     * @allow (update) Allow any authenticated user (jury member) to update a score.
-     * @allow (delete) Allow any authenticated user (jury member) to delete a score.
-     * @deny (list) Deny anyone from listing scores.
-     * @principle Jury members can only create/modify scores if authenticated (anonymous auth)
+     * @allow (read, list) Allow any authenticated user to read scores.
+     * @allow (write) Allow any authenticated user to write scores.
      */
     match /scores/{teamId} {
-      allow get: if true;
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+       allow read, list, write: if isSignedIn();
     }
 
     /**
      * @description Grants access to jury member data.
      * @path /juries/{juryId}
-     * @allow (get) Allow anyone to read jury member data.
-     * @allow (create) Allow anyone to create jury member data. Only for testing purposes.
-     * @allow (update) Allow anyone to update jury member data. Only for testing purposes.
-     * @allow (delete) Allow anyone to delete jury member data. Only for testing purposes.
-     * @deny (list) Deny anyone from listing jury member data.
-     * @principle Public read access with write disabled for prototyping.
+     * @allow (read, list) Publicly readable for jury selection on login.
+     * @allow (write) Only authenticated users (admins) can modify jury data.
      */
     match /juries/{juryId} {
-      allow get: if true;
-      allow list: if false;
-
-      //In Prototyping Mode, allow create, update, delete for rapid iteration.  In production, these would be protected.
-      allow create: if true;
-      allow update: if true;
-      allow delete: if true;
+      allow read, list: if true;
+      allow write: if isSignedIn();
     }
 
     /**
      * @description Grants access to app configuration data.
      * @path /appConfig/{docId}
-     * @allow (get, list) Allow anyone to read app configuration.
-     * @allow (write) Allow any authenticated user to write.
-     * @principle Public read, but restricted write for admin functionality.
+     * @allow (read, list) Publicly readable for login background.
+     * @allow (write) Allow any authenticated user to write. (Admin check is done in UI, not rules)
      */
     match /appConfig/{docId} {
-      allow read: if true;
-      allow write: if isSignedIn(); // For simplicity, any signed-in user can write. In prod, you'd check a custom claim.
+      allow read, list: if true;
+      allow write: if isSignedIn();
     }
 
 

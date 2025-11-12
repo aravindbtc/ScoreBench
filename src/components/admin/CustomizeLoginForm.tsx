@@ -13,7 +13,6 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Loader2 } from 'lucide-react';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ImagePlaceholder } from '@/lib/types';
@@ -28,7 +27,6 @@ type FormValues = z.infer<typeof formSchema>;
 export function CustomizeLoginForm() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const router = useRouter();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -81,7 +79,6 @@ export function CustomizeLoginForm() {
             title: 'Success!',
             description: 'The login background has been updated.',
         });
-        // The real-time listener in CurrentLoginBackground will handle the UI update.
     } catch (error) {
         const message = error instanceof Error ? error.message : 'An unknown error occurred.';
         toast({
@@ -134,4 +131,3 @@ export function CustomizeLoginForm() {
     </Form>
   );
 }
-
