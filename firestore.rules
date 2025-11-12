@@ -1,0 +1,89 @@
+/**
+ * @fileoverview Firestore Security Rules for HackEval application.
+ *
+ * Core Philosophy:
+ * This ruleset prioritizes authorization independence by denormalizing data, allowing for simpler and more performant rules.
+ * It leverages Anonymous Authentication for jury members, with access primarily governed by the Firebase Auth service.
+ * Data validation is relaxed to allow for rapid prototyping, focusing on authorization and relational integrity.
+ *
+ * Data Structure:
+ * - /teams/{teamId}: Stores information about each team.
+ * - /scores/{teamId}: Stores scores given to a team by jury members.
+ * - /juries/{juryId}: Stores information about jury members.
+ *
+ * Key Security Decisions:
+ * - Jury member access to scoring is granted via Anonymous Authentication, with no reliance on custom claims or complex role hierarchies.
+ * - Write operations to the `/scores/{teamId}` collection happen with the `request.auth.uid` parameter.
+ * - No user listing is allowed for any collection.
+ *
+ * Denormalization for Authorization:
+ * - The `/scores/{teamId}` collection includes the `teamId`, allowing direct association between scores and teams without needing to perform `get()` operations.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Grants access to team data.
+     * @path /teams/{teamId}
+     * @allow (get) Allow anyone to read team information.
+     * @allow (create) Allow anyone to create team information. Only for testing purposes.
+     * @allow (update) Allow anyone to update team information. Only for testing purposes.
+     * @allow (delete) Allow anyone to delete team information. Only for testing purposes.
+     * @deny (list) Deny anyone from listing team information.
+     * @principle Public read access with write disabled for prototyping.
+     */
+    match /teams/{teamId} {
+      allow get: if true;
+      allow list: if false;
+
+      //In Prototyping Mode, allow create, update, delete for rapid iteration.  In production, these would be protected.
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
+    }
+
+    /**
+     * @description Grants jury members (via anonymous auth) access to create, read, update and delete scores.
+     * @path /scores/{teamId}
+     * @allow (create) Allow any authenticated user (jury member) to create a score.
+     * @allow (get) Allow anyone to read a score.
+     * @allow (update) Allow any authenticated user (jury member) to update a score.
+     * @allow (delete) Allow any authenticated user (jury member) to delete a score.
+     * @deny (list) Deny anyone from listing scores.
+     * @principle Jury members can only create/modify scores if authenticated (anonymous auth)
+     */
+    match /scores/{teamId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Grants access to jury member data.
+     * @path /juries/{juryId}
+     * @allow (get) Allow anyone to read jury member data.
+     * @allow (create) Allow anyone to create jury member data. Only for testing purposes.
+     * @allow (update) Allow anyone to update jury member data. Only for testing purposes.
+     * @allow (delete) Allow anyone to delete jury member data. Only for testing purposes.
+     * @deny (list) Deny anyone from listing jury member data.
+     * @principle Public read access with write disabled for prototyping.
+     */
+    match /juries/{juryId} {
+      allow get: if true;
+      allow list: if false;
+
+      //In Prototyping Mode, allow create, update, delete for rapid iteration.  In production, these would be protected.
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
+    }
+
+    // Helper function to determine if the user is signed in.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+  }
+}

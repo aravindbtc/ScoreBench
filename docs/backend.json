@@ -1,0 +1,152 @@
+{
+  "entities": {
+    "Team": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Team",
+      "type": "object",
+      "description": "Represents a team participating in the hackathon.",
+      "properties": {
+        "teamId": {
+          "type": "string",
+          "description": "Unique identifier for the Team entity."
+        },
+        "teamName": {
+          "type": "string",
+          "description": "The name of the team."
+        },
+        "projectName": {
+          "type": "string",
+          "description": "The name of the project the team is working on."
+        }
+      },
+      "required": [
+        "teamId",
+        "teamName",
+        "projectName"
+      ]
+    },
+    "Score": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Score",
+      "type": "object",
+      "description": "Represents the scores given to a team by the jury members.",
+      "properties": {
+        "teamId": {
+          "type": "string",
+          "description": "Reference to Team. (Relationship: Team 1:N Score)"
+        },
+        "panel1": {
+          "type": "string",
+          "description": "Scores from panel 1"
+        },
+        "panel2": {
+          "type": "string",
+          "description": "Scores from panel 2"
+        },
+        "panel3": {
+          "type": "string",
+          "description": "Scores from panel 3"
+        },
+        "avgScore": {
+          "type": "number",
+          "description": "The average score calculated from the panel scores."
+        },
+        "autoFeedback": {
+          "type": "string",
+          "description": "AI generated feedback for the team."
+        }
+      },
+      "required": [
+        "teamId",
+        "panel1",
+        "panel2",
+        "panel3",
+        "avgScore"
+      ]
+    },
+    "Jury": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Jury",
+      "type": "object",
+      "description": "Represents a jury member.",
+      "properties": {
+        "juryId": {
+          "type": "string",
+          "description": "Unique identifier for the Jury entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the jury member."
+        },
+        "panelNo": {
+          "type": "number",
+          "description": "The panel number assigned to the jury member."
+        }
+      },
+      "required": [
+        "juryId",
+        "name",
+        "panelNo"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/teams/{teamId}",
+        "definition": {
+          "entityName": "Team",
+          "schema": {
+            "$ref": "#/backend/entities/Team"
+          },
+          "description": "Stores information about each team participating in the hackathon.",
+          "params": [
+            {
+              "name": "teamId",
+              "description": "Unique identifier for the team."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/scores/{teamId}",
+        "definition": {
+          "entityName": "Score",
+          "schema": {
+            "$ref": "#/backend/entities/Score"
+          },
+          "description": "Stores scores given to a team by the jury members. Includes denormalized 'teamId' for authorization independence.",
+          "params": [
+            {
+              "name": "teamId",
+              "description": "Unique identifier for the team being scored."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/juries/{juryId}",
+        "definition": {
+          "entityName": "Jury",
+          "schema": {
+            "$ref": "#/backend/entities/Jury"
+          },
+          "description": "Stores information about jury members.",
+          "params": [
+            {
+              "name": "juryId",
+              "description": "Unique identifier for the jury member."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support the HackEval application, focusing on jury evaluations of teams participating in a hackathon. It prioritizes authorization independence and clarity for secure and efficient data access.\n\nAuthorization Independence is achieved through denormalization. Specifically, the `scores` collection includes the `teamId` which allows direct association between scores and teams without needing to perform `get()` operations to verify team existence or attributes.  Jury member access to scoring is granted via Anonymous Authentication, with no reliance on custom claims or complex role hierarchies.\n\nQAPs (Rules are Not Filters) are supported as follows:\n\n1.  Segregation:  The `/teams` and `/scores` collections are segregated, each with distinct security requirements. Admin access for uploading teams and viewing scores will rely on a simple password check (environment variable) rather than complex Firestore rules.\n\n2.  Membership (implicit): The design relies on Anonymous Auth for Jury members. Access to write scores is controlled by the Firebase Auth service, without the need for storing explicit membership roles in the database. The write operation to the /scores/{teamId} collection will happen with the request.auth.uid parameter.\n\nThe structure uses consistent naming conventions and explicit state modeling. The `teamId` field serves as a consistent reference across collections.\n"
+  }
+}
