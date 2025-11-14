@@ -157,88 +157,88 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
   }
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Leaderboard</CardTitle>
-        <p className="text-muted-foreground">Detailed scores for all participating teams.</p>
-      </CardHeader>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className='w-[40px]'></TableHead>
-            <TableHead>Team Name</TableHead>
-            <TableHead>Project Name</TableHead>
-            <TableHead className="text-center w-[100px]">Panel 1</TableHead>
-            <TableHead className="text-center w-[100px]">Panel 2</TableHead>
-            <TableHead className="text-center w-[100px]">Panel 3</TableHead>
-            <TableHead className="text-right w-[150px]">Average Score</TableHead>
-            <TableHead className="text-right w-[80px]">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <Accordion type="single" collapsible className="w-full" asChild>
-          <TableBody>
-              {data.map((item) => (
-              <AccordionItem value={item.id} key={item.id} asChild>
-                <>
-                  <TableRow>
-                      <TableCell>
-                          <AccordionTrigger className='p-0 [&[data-state=open]>svg]:text-primary'></AccordionTrigger>
-                      </TableCell>
-                      <TableCell className="font-medium">{item.teamName}</TableCell>
-                      <TableCell>{item.projectName}</TableCell>
-                      <TableCell className="text-center">
-                          {item.scores.panel1 ? <Badge variant="outline">{item.scores.panel1.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
-                      </TableCell>
-                      <TableCell className="text-center">
-                          {item.scores.panel2 ? <Badge variant="outline">{item.scores.panel2.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
-                      </TableCell>
-                      <TableCell className="text-center">
-                          {item.scores.panel3 ? <Badge variant="outline">{item.scores.panel3.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
-                      </TableCell>
-                      <TableCell className="text-right">
-                      {item.scores.avgScore ? (
-                          <Badge variant="secondary" className="text-lg font-bold text-primary">
-                          {item.scores.avgScore.toFixed(2)}
-                          </Badge>
-                      ) : (
-                          <Badge variant="outline">N/A</Badge>
-                      )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                      <Tooltip>
-                          <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDeleteRequest(item); }}>
-                              <Trash2 className="h-4 w-4 text-destructive/70" />
-                          </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                          <p>Delete Team</p>
-                          </TooltipContent>
-                      </Tooltip>
-                      </TableCell>
-                  </TableRow>
-                  <TableRow>
-                      <TableCell colSpan={8} className="p-0">
-                      <AccordionContent>
-                          <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <PanelScoreDetails panelNo={1} scoreData={item.scores.panel1} criteria={criteria} />
-                              <PanelScoreDetails panelNo={2} scoreData={item.scores.panel2} criteria={criteria} />
-                              <PanelScoreDetails panelNo={3} scoreData={item.scores.panel3} criteria={criteria} />
-                          </div>
-                          <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                              <ScoreRadarChart scores={item.scores} criteria={criteria} />
-                          </div>
-                          <ConsolidatedFeedback scores={item.scores} teamId={item.id} />
-                          </div>
-                      </AccordionContent>
-                      </TableCell>
-                  </TableRow>
-                </>
-              </AccordionItem>
-              ))}
-          </TableBody>
+        <CardHeader>
+            <CardTitle>Leaderboard</CardTitle>
+            <p className="text-muted-foreground">Detailed scores for all participating teams.</p>
+        </CardHeader>
+        <Accordion type="single" collapsible asChild>
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead className='w-[40px]'></TableHead>
+                    <TableHead>Team Name</TableHead>
+                    <TableHead>Project Name</TableHead>
+                    <TableHead className="text-center w-[100px]">Panel 1</TableHead>
+                    <TableHead className="text-center w-[100px]">Panel 2</TableHead>
+                    <TableHead className="text-center w-[100px]">Panel 3</TableHead>
+                    <TableHead className="text-right w-[150px]">Average Score</TableHead>
+                    <TableHead className="text-right w-[80px]">Actions</TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {data.map((item) => (
+                        <React.Fragment key={item.id}>
+                            <TableRow>
+                                <TableCell>
+                                    <AccordionTrigger className='p-0 [&[data-state=open]>svg]:text-primary'></AccordionTrigger>
+                                </TableCell>
+                                <TableCell className="font-medium">{item.teamName}</TableCell>
+                                <TableCell>{item.projectName}</TableCell>
+                                <TableCell className="text-center">
+                                    {item.scores.panel1 ? <Badge variant="outline">{item.scores.panel1.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                    {item.scores.panel2 ? <Badge variant="outline">{item.scores.panel2.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                    {item.scores.panel3 ? <Badge variant="outline">{item.scores.panel3.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                {item.scores.avgScore ? (
+                                    <Badge variant="secondary" className="text-lg font-bold text-primary">
+                                    {item.scores.avgScore.toFixed(2)}
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="outline">N/A</Badge>
+                                )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDeleteRequest(item); }}>
+                                        <Trash2 className="h-4 w-4 text-destructive/70" />
+                                    </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                    <p>Delete Team</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                </TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell colSpan={8} className="p-0">
+                                <AccordionItem value={item.id} className="border-b-0">
+                                    <AccordionContent>
+                                        <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <PanelScoreDetails panelNo={1} scoreData={item.scores.panel1} criteria={criteria} />
+                                            <PanelScoreDetails panelNo={2} scoreData={item.scores.panel2} criteria={criteria} />
+                                            <PanelScoreDetails panelNo={3} scoreData={item.scores.panel3} criteria={criteria} />
+                                        </div>
+                                        <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                                            <ScoreRadarChart scores={item.scores} criteria={criteria} />
+                                        </div>
+                                        <ConsolidatedFeedback scores={item.scores} teamId={item.id} />
+                                        </div>
+                                    </AccordionContent>
+                                    </AccordionItem>
+                                </TableCell>
+                            </TableRow>
+                        </React.Fragment>
+                    ))}
+                </TableBody>
+            </Table>
         </Accordion>
-      </Table>
     </Card>
   );
 }
