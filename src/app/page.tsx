@@ -10,14 +10,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function LoginPage() {
-  // Read the background image directly from the local file for stability.
-  const background = PlaceHolderImages.find((img) => img.id === 'login-background') || null;
+  // Directly read the background image URL from the local JSON file.
+  // This ensures stability and availability on any hosting platform.
+  const background = PlaceHolderImages.find((img) => img.id === 'login-background');
+  const backgroundImageUrl = background?.imageUrl;
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
-      <Suspense fallback={<Skeleton className="absolute inset-0 -z-10" />}>
-        <LoginBackground background={background} />
-      </Suspense>
+      {backgroundImageUrl ? (
+        <Suspense fallback={<Skeleton className="absolute inset-0 -z-10" />}>
+          <LoginBackground backgroundImageUrl={backgroundImageUrl} />
+        </Suspense>
+      ) : (
+        <div className="absolute inset-0 -z-10 bg-muted" />
+      )}
       
       <div className="absolute top-6 left-6">
         <AppLogo />
