@@ -24,13 +24,6 @@ import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } 
 import { Input } from '../ui/input';
 
 const createScoreSchema = (criteria: EvaluationCriterion[]) => {
-  if (criteria.length === 0) {
-    return z.object({
-      scores: z.object({}),
-      remarks: z.string().min(10, 'Please provide some detailed remarks.'),
-    });
-  }
-
   const schemaObject = criteria.reduce((acc, criterion) => {
     acc[criterion.id] = z.coerce.number()
         .min(1, { message: "Must be at least 1." })
@@ -40,9 +33,10 @@ const createScoreSchema = (criteria: EvaluationCriterion[]) => {
 
   return z.object({
     scores: z.object(schemaObject),
-    remarks: z.string().min(10, 'Please provide some detailed remarks.'),
+    remarks: z.string(), // Remarks are now optional
   });
 };
+
 
 type ScoreFormData = z.infer<ReturnType<typeof createScoreSchema>>;
 
@@ -192,7 +186,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                             name="remarks"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Remarks</FormLabel>
+                                    <FormLabel>Remarks (Optional)</FormLabel>
                                     <FormControl>
                                         <Textarea placeholder="Provide your detailed feedback here..." {...field} />
                                     </FormControl>
@@ -236,5 +230,3 @@ export function ScoreForm(props: ScoreFormProps) {
   
   return <ScoreFormContent {...props} activeCriteria={activeCriteria} />
 }
-
-    
