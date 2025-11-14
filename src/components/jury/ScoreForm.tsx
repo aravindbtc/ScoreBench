@@ -58,26 +58,23 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
     const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
     
     const [isEditing, setIsEditing] = useState(!existingPanelScore);
+    
+    useEffect(() => {
+        setIsEditing(!existingPanelScore);
+    }, [existingPanelScore]);
 
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
-    });
-
-    // Effect to update the form's default values and editing state when data loads
-    useEffect(() => {
-        const defaultValues = {
+        defaultValues: {
             scores: activeCriteria.reduce((acc, c) => ({
                 ...acc,
                 [c.id]: existingPanelScore?.scores?.[c.id] ?? 5
             }), {}),
             remarks: existingPanelScore?.remarks ?? '',
-        };
-        form.reset(defaultValues);
-        setIsEditing(!existingPanelScore);
-    }, [existingPanelScore, activeCriteria, form]);
-
+        }
+    });
 
     const watchedScores = form.watch('scores');
     
@@ -85,6 +82,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         if (!watchedScores) return 0;
         return Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
     }, [watchedScores]);
+
 
     function onSubmit(data: ScoreFormData) {
         setIsSubmitting(true);
