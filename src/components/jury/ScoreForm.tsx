@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -84,9 +85,10 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
         defaultValues: defaultValues,
-        disabled: isAlreadyScored || isSubmitting,
+        disabled: isAlreadyScored,
     });
-
+    
+    // Watch for changes in score inputs and recalculate the total
     const watchedScores = form.watch('scores');
     useEffect(() => {
         if (watchedScores) {
@@ -94,6 +96,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
             setTotalScore(sum);
         }
     }, [watchedScores]);
+
 
     async function onSubmit(data: ScoreFormData) {
         setIsSubmitting(true);
@@ -124,7 +127,9 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
             form.control.disable(); // Disable form after successful submission
         } catch (error) {
             console.error('Error submitting score:', error);
-            setIsSubmitting(false);
+            // This will be handled by the global error handler
+        } finally {
+            setIsSubmitting(false); // Reset submitting state regardless of outcome
         }
     }
 
@@ -204,7 +209,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                         <div className="text-2xl font-bold">
                             Total Score: <span className="text-primary">{totalScore} / {activeCriteria.length * 10}</span>
                         </div>
-                        <Button type="submit" size="lg" disabled={form.formState.disabled || !form.formState.isValid}>
+                        <Button type="submit" size="lg" disabled={form.formState.disabled || isSubmitting || !form.formState.isValid}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isSubmitting ? 'Submitting...' : 'Submit Score'}
                         </Button>
