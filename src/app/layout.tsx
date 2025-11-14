@@ -3,8 +3,8 @@ import './globals.css';
 import { Providers } from '@/components/Providers';
 
 export const metadata: Metadata = {
-  title: 'HackEval - Jury Evaluation System',
-  description: 'A modern, real-time evaluation system for hackathons.',
+  title: 'ScoreBench - Jury Evaluation System',
+  description: 'A modern, real-time evaluation system for competitions.',
   icons: {
     icon: '/icon.svg',
   },

@@ -25,7 +25,7 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight">Welcome to HackEval</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Welcome to ScoreBench</h2>
           <p className="text-muted-foreground">Select your role to proceed</p>
         </CardHeader>
         <CardContent>

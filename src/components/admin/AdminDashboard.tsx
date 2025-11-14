@@ -92,8 +92,8 @@ export function AdminDashboard() {
 
     const worksheet = XLSX.utils.json_to_sheet(dataForExport);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'HackEval Scores');
-    XLSX.writeFile(workbook, 'HackEval_Scores.xlsx');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'ScoreBench Scores');
+    XLSX.writeFile(workbook, 'ScoreBench_Scores.xlsx');
   };
 
   const handleDelete = async () => {
