@@ -82,10 +82,17 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
     });
     
     useEffect(() => {
+        // This effect will run when `isAlreadyScored` becomes true after submission,
+        // or if it was true initially.
         if (isAlreadyScored) {
-            form.control.disable();
+            // Disable all fields manually if the form is already scored.
+            // This is a more direct way to control the form's state.
+            Object.keys(form.getValues().scores).forEach(key => {
+                form.control.register(`scores.${key}` as any, { disabled: true });
+            });
+            form.control.register('remarks', { disabled: true });
         }
-    }, [isAlreadyScored, form.control]);
+    }, [isAlreadyScored, form.control, form]);
 
 
     const watchedScores = form.watch('scores');
@@ -133,7 +140,6 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         });
 
         // 6. Disable the form and finalize UI state
-        form.control.disable(); 
         setIsAlreadyScored(true);
         setIsSubmitting(false);
     }
@@ -154,6 +160,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                                         key={criterion.id}
                                         control={form.control}
                                         name={`scores.${criterion.id}`}
+                                        disabled={isAlreadyScored}
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel title={criterion.description}>{criterion.name}</FormLabel>
@@ -184,6 +191,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                         <FormField
                             control={form.control}
                             name="remarks"
+                            disabled={isAlreadyScored}
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Remarks (Optional)</FormLabel>
