@@ -74,10 +74,13 @@ export function AdminDashboard() {
       };
       
       for(let i = 1; i <= 3; i++) {
-        const panel = item.scores[`panel${i}` as keyof TeamScores] as Score | undefined;
+        const panelKey = `panel${i}` as keyof TeamScores;
+        const panel = item.scores[panelKey] as Score | undefined;
         row[`Panel ${i} Total Score`] = panel?.total ?? 'N/A';
-        for (const criterion of allCriteria) {
-          row[`P${i} ${criterion.name}`] = panel?.scores[criterion.id] ?? 'N/A';
+        if(panel?.scores) {
+            for (const criterion of allCriteria) {
+                row[`P${i} ${criterion.name}`] = panel?.scores[criterion.id] ?? 'N/A';
+            }
         }
         row[`Panel ${i} Remarks`] = panel?.remarks ?? '';
         row[`Panel ${i} AI Feedback`] = panel?.aiFeedback ?? '';
@@ -135,7 +138,6 @@ export function AdminDashboard() {
             <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
             <TabsTrigger value="teams">Team Management</TabsTrigger>
             <TabsTrigger value="juries">Jury Management</TabsTrigger>
-            <TabsTrigger value="criteria">Criteria</TabsTrigger>
           </TabsList>
            <div className="flex flex-wrap gap-2">
             <Button onClick={handleExport} variant="outline" disabled={isLoading || !combinedData.length}>
@@ -168,7 +170,7 @@ export function AdminDashboard() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <ScoreTable data={combinedData} onDeleteRequest={(team) => setItemToDelete({type: 'team', data: team})} />
+            <ScoreTable data={combinedData} onDeleteRequest={(team) => setItemToDelete({type: 'team', data: team})} criteria={criteria || []}/>
           )}
         </TabsContent>
         <TabsContent value="teams" className="mt-4">
@@ -203,15 +205,6 @@ export function AdminDashboard() {
               </div>
               <JuryManagement juries={juries || []} onDeleteRequest={(jury) => setItemToDelete({type: 'jury', data: jury})} />
             </>
-          )}
-        </TabsContent>
-        <TabsContent value="criteria" className="mt-4">
-           {isLoading ? (
-            <div className="flex items-center justify-center p-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <CriteriaManagement criteria={criteria || []} />
           )}
         </TabsContent>
       </Tabs>

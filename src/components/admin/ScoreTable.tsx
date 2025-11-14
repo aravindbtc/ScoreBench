@@ -16,7 +16,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import type { CombinedScoreData, Score, TeamScores } from '@/lib/types';
+import type { CombinedScoreData, Score, TeamScores, EvaluationCriterion } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -30,10 +30,11 @@ import { ScoreRadarChart } from './charts/ScoreRadarChart';
 
 interface ScoreTableProps {
   data: CombinedScoreData[];
+  criteria: EvaluationCriterion[];
   onDeleteRequest: (team: CombinedScoreData) => void;
 }
 
-const PanelScoreDetails = ({ panelNo, scoreData }: { panelNo: number, scoreData?: Score }) => {
+const PanelScoreDetails = ({ panelNo, scoreData, criteria }: { panelNo: number, scoreData?: Score, criteria: EvaluationCriterion[] }) => {
   if (!scoreData) {
     return (
       <div className="p-4 text-sm text-center text-muted-foreground bg-muted/20 rounded-lg h-full flex items-center justify-center">Panel {panelNo}: No score submitted.</div>
@@ -41,7 +42,8 @@ const PanelScoreDetails = ({ panelNo, scoreData }: { panelNo: number, scoreData?
   }
 
   const { scores, total, remarks, aiFeedback } = scoreData;
-  const maxScore = Object.keys(scores).length * 10;
+  const activeCriteria = criteria.filter(c => c.active && scores[c.id]);
+  const maxScore = activeCriteria.length * 10;
 
   return (
     <Card className="bg-background/50 h-full">
@@ -52,8 +54,8 @@ const PanelScoreDetails = ({ panelNo, scoreData }: { panelNo: number, scoreData?
             <div>
                 <h4 className="font-semibold">Score Breakdown:</h4>
                 <p className="text-muted-foreground flex flex-wrap gap-x-2">
-                  {Object.entries(scores).map(([key, value]) => (
-                    <span key={key}>{key.charAt(0).toUpperCase() + key.slice(1)}: {value}</span>
+                  {activeCriteria.map((criterion) => (
+                    <span key={criterion.id}>{criterion.name}: {scores[criterion.id]}</span>
                   ))}
                 </p>
             </div>
@@ -144,7 +146,7 @@ const ConsolidatedFeedback = ({ scores, teamId }: { scores: TeamScores, teamId: 
 };
 
 
-export function ScoreTable({ data, onDeleteRequest }: ScoreTableProps) {
+export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps) {
   if (data.length === 0) {
     return (
       <Card className="text-center p-8">
@@ -206,12 +208,12 @@ export function ScoreTable({ data, onDeleteRequest }: ScoreTableProps) {
                      <AccordionContent>
                       <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <PanelScoreDetails panelNo={1} scoreData={item.scores.panel1} />
-                            <PanelScoreDetails panelNo={2} scoreData={item.scores.panel2} />
-                            <PanelScoreDetails panelNo={3} scoreData={item.scores.panel3} />
+                            <PanelScoreDetails panelNo={1} scoreData={item.scores.panel1} criteria={criteria} />
+                            <PanelScoreDetails panelNo={2} scoreData={item.scores.panel2} criteria={criteria} />
+                            <PanelScoreDetails panelNo={3} scoreData={item.scores.panel3} criteria={criteria} />
                         </div>
                         <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                            <ScoreRadarChart scores={item.scores} />
+                            <ScoreRadarChart scores={item.scores} criteria={criteria} />
                         </div>
                         <ConsolidatedFeedback scores={item.scores} teamId={item.id} />
                       </div>

@@ -15,11 +15,12 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import type { TeamScores } from '@/lib/types';
+import type { TeamScores, EvaluationCriterion } from '@/lib/types';
 import { useMemo } from 'react';
 
 interface ScoreRadarChartProps {
   scores: TeamScores;
+  criteria: EvaluationCriterion[];
 }
 
 const chartConfig = {
@@ -37,26 +38,24 @@ const chartConfig = {
     },
 };
 
-export function ScoreRadarChart({ scores }: ScoreRadarChartProps) {
+export function ScoreRadarChart({ scores, criteria: allCriteria }: ScoreRadarChartProps) {
 
   const { chartData, hasData } = useMemo(() => {
-    const allCriteria = new Set<string>();
-    if (scores.panel1) Object.keys(scores.panel1.scores).forEach(c => allCriteria.add(c));
-    if (scores.panel2) Object.keys(scores.panel2.scores).forEach(c => allCriteria.add(c));
-    if (scores.panel3) Object.keys(scores.panel3.scores).forEach(c => allCriteria.add(c));
-
-    const criteria = Array.from(allCriteria);
+    // We only want to show criteria that are currently active and have been scored by at least one panel
+    const activeScoredCriteria = allCriteria.filter(c => 
+      c.active && (scores.panel1?.scores[c.id] || scores.panel2?.scores[c.id] || scores.panel3?.scores[c.id])
+    );
     
-    const data = criteria.map(criterion => {
-      let dataPoint: {[key: string]: string | number} = { criterion: criterion.charAt(0).toUpperCase() + criterion.slice(1) };
-      dataPoint.panel1 = scores.panel1?.scores[criterion] ?? 0;
-      dataPoint.panel2 = scores.panel2?.scores[criterion] ?? 0;
-      dataPoint.panel3 = scores.panel3?.scores[criterion] ?? 0;
+    const data = activeScoredCriteria.map(criterion => {
+      let dataPoint: {[key: string]: string | number} = { criterion: criterion.name };
+      dataPoint.panel1 = scores.panel1?.scores[criterion.id] ?? 0;
+      dataPoint.panel2 = scores.panel2?.scores[criterion.id] ?? 0;
+      dataPoint.panel3 = scores.panel3?.scores[criterion.id] ?? 0;
       return dataPoint;
     });
 
-    return { chartData: data, hasData: data.length > 0 && (scores.panel1 || scores.panel2 || scores.panel3) };
-  }, [scores]);
+    return { chartData: data, hasData: data.length > 0 };
+  }, [scores, allCriteria]);
 
 
   return (
@@ -64,7 +63,7 @@ export function ScoreRadarChart({ scores }: ScoreRadarChartProps) {
       <CardHeader>
         <CardTitle>Score Breakdown</CardTitle>
         <CardDescription>
-          A visual comparison of scores from each panel across all criteria.
+          A visual comparison of scores from each panel across all active criteria.
         </CardDescription>
       </CardHeader>
       <CardContent>
