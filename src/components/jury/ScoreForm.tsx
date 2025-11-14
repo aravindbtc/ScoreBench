@@ -57,24 +57,31 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
 
   const isAlreadyScored = !!existingScores?.[`panel${juryPanel}` as keyof TeamScores];
 
-  // Dynamically create the schema and form default values
-  const { scoreSchema, form } = useMemo(() => {
-    const criteria = activeCriteria || [];
-    const schema = createScoreSchema(criteria);
-    const defaultValues = {
-      scores: criteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {}),
-      remarks: '',
-      aiFeedback: '',
-    };
-    
-    const form = useForm<ScoreFormData>({
-      resolver: zodResolver(schema),
-      defaultValues,
-      disabled: isAlreadyScored || isSubmitting,
-    });
+  // Initialize form at the top level
+  const form = useForm<ScoreFormData>({
+    defaultValues: { scores: {}, remarks: '', aiFeedback: '' },
+    disabled: isAlreadyScored || isSubmitting,
+  });
 
-    return { scoreSchema: schema, form };
-  }, [activeCriteria, isAlreadyScored, isSubmitting]);
+  // Effect to update form resolver and default values when criteria change
+  useEffect(() => {
+    if (activeCriteria) {
+      const schema = createScoreSchema(activeCriteria);
+      // @ts-ignore - zodResolver has a slightly weird type but this works
+      form.resolver = zodResolver(schema);
+
+      const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
+      const currentValues = form.getValues();
+      
+      // Reset form with new schema and defaults, preserving remarks/AI feedback if they exist
+      form.reset({
+        scores: defaultScores,
+        remarks: currentValues.remarks || '',
+        aiFeedback: currentValues.aiFeedback || '',
+      });
+    }
+  }, [activeCriteria, form]);
+
 
   const watchedScores = form.watch('scores');
 
@@ -153,7 +160,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
     }
   }
   
-  if (criteriaLoading) {
+  if (criteriaLoading || !activeCriteria) {
     return <Card><CardContent><Loader2 className="m-auto my-8 h-8 w-8 animate-spin text-primary" /></CardContent></Card>
   }
   
@@ -195,7 +202,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
                       </div>
                       <FormControl>
                         <Slider
-                          defaultValue={[value]}
+                          value={[value]}
                           onValueChange={(vals) => onChange(vals[0])}
                           min={1}
                           max={10}
