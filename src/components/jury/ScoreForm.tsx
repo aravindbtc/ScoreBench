@@ -18,7 +18,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Edit } from 'lucide-react';
 import { doc, collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { Input } from '../ui/input';
@@ -33,7 +33,7 @@ const createScoreSchema = (criteria: EvaluationCriterion[]) => {
 
   return z.object({
     scores: z.object(schemaObject),
-    remarks: z.string(), // Remarks are now optional
+    remarks: z.string(), // Remarks are optional
   });
 };
 
@@ -51,57 +51,59 @@ interface ScoreFormContentProps extends ScoreFormProps {
 }
 
 function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: ScoreFormContentProps) {
-    const [totalScore, setTotalScore] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
     const firestore = useFirestore();
 
     const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
-    const [isAlreadyScored, setIsAlreadyScored] = useState(!!existingPanelScore);
+    
+    // This state now controls whether the form is in "edit" or "view" mode.
+    const [isEditing, setIsEditing] = useState(!existingPanelScore);
+    const [totalScore, setTotalScore] = useState(0);
 
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
     const defaultValues = useMemo(() => {
-        if (existingPanelScore) {
-            return {
-                scores: existingPanelScore.scores,
-                remarks: existingPanelScore.remarks,
-            };
-        }
-        // Initialize with default score of 5 for each active criterion
-        const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
-        return {
-            scores: defaultScores,
+        const initialScore = existingPanelScore || {
+            scores: activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {}),
             remarks: '',
+        };
+
+        const scoreValues = { ...initialScore.scores };
+        // Ensure all active criteria have a default value
+        activeCriteria.forEach(c => {
+            if (scoreValues[c.id] === undefined) {
+                scoreValues[c.id] = 5;
+            }
+        });
+
+        return {
+            scores: scoreValues,
+            remarks: initialScore.remarks,
         };
     }, [activeCriteria, existingPanelScore]);
 
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
-        defaultValues: defaultValues,
+        defaultValues,
     });
     
-    useEffect(() => {
-        // This effect will run when `isAlreadyScored` becomes true after submission,
-        // or if it was true initially.
-        if (isAlreadyScored) {
-            // Disable all fields manually if the form is already scored.
-            // This is a more direct way to control the form's state.
-            Object.keys(form.getValues().scores).forEach(key => {
-                form.control.register(`scores.${key}` as any, { disabled: true });
-            });
-            form.control.register('remarks', { disabled: true });
-        }
-    }, [isAlreadyScored, form.control, form]);
-
-
+    // Watch scores to calculate total in real-time
     const watchedScores = form.watch('scores');
     useEffect(() => {
         if (watchedScores) {
             const sum = Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
             setTotalScore(sum);
+        } else {
+             const sum = Object.values(defaultValues.scores).reduce((acc, current) => acc + (Number(current) || 0), 0);
+             setTotalScore(sum);
         }
-    }, [watchedScores]);
+    }, [watchedScores, defaultValues.scores]);
+
+    // Reset the form's default values if the underlying data changes
+    useEffect(() => {
+        form.reset(defaultValues);
+    }, [defaultValues, form]);
 
 
     function onSubmit(data: ScoreFormData) {
@@ -120,7 +122,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         ];
 
         // 2. Calculate new average score
-        const validScores = allPanelScores.filter((s): s is Score => s !== undefined);
+        const validScores = allPanelScores.filter((s): s is Score => s !== undefined && s.total !== undefined);
         const total = validScores.reduce((acc, s) => acc + s.total, 0);
         const avgScore = validScores.length > 0 ? total / validScores.length : 0;
         
@@ -140,7 +142,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         });
 
         // 6. Disable the form and finalize UI state
-        setIsAlreadyScored(true);
+        setIsEditing(false);
         setIsSubmitting(false);
     }
     
@@ -160,7 +162,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                                         key={criterion.id}
                                         control={form.control}
                                         name={`scores.${criterion.id}`}
-                                        disabled={isAlreadyScored}
+                                        disabled={!isEditing}
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel title={criterion.description}>{criterion.name}</FormLabel>
@@ -191,7 +193,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                         <FormField
                             control={form.control}
                             name="remarks"
-                            disabled={isAlreadyScored}
+                            disabled={!isEditing}
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Remarks (Optional)</FormLabel>
@@ -207,12 +209,22 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                         <div className="text-2xl font-bold">
                             Total Score: <span className="text-primary">{totalScore} / {activeCriteria.length * 10}</span>
                         </div>
-                        <Button type="submit" size="lg" disabled={isAlreadyScored || isSubmitting || !form.formState.isValid}>
-                            {isSubmitting ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : null}
-                            {isAlreadyScored ? 'Score Submitted' : isSubmitting ? 'Submitting...' : 'Submit Score'}
-                        </Button>
+                        {isEditing ? (
+                            <Button type="submit" size="lg" disabled={isSubmitting || !form.formState.isValid}>
+                                {isSubmitting ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : null}
+                                {isSubmitting ? 'Submitting...' : (existingPanelScore ? 'Update Score' : 'Submit Score')}
+                            </Button>
+                        ) : (
+                             <div className="flex items-center gap-4">
+                                <span className="text-sm font-medium text-green-600">Score Submitted</span>
+                                <Button type="button" variant="outline" onClick={() => setIsEditing(true)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit Score
+                                </Button>
+                            </div>
+                        )}
                     </CardFooter>
                 </form>
             </Form>
