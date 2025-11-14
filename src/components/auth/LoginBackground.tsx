@@ -19,7 +19,7 @@ export function LoginBackground({ background }: LoginBackgroundProps) {
       src={background.imageUrl}
       alt={background.description || "Login background"}
       fill
-      className="object-cover -z-10 opacity-30"
+      className="object-cover -z-10"
       data-ai-hint={background.imageHint}
       priority
     />
