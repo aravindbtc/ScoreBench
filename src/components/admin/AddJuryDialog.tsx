@@ -113,7 +113,7 @@ export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
                 <FormItem>
                   <Label htmlFor="panelNo">Panel Number</Label>
                   <FormControl>
-                    <Input id="panelNo" type="number" placeholder="e.g., 4" {...field} />
+                    <Input id="panelNo" type="number" placeholder="e.g., 1" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
