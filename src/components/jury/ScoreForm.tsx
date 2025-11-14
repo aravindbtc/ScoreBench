@@ -74,45 +74,27 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
   const form = useForm<ScoreFormData>({
     resolver: zodResolver(scoreSchema),
     disabled: isAlreadyScored || isSubmitting,
-    defaultValues: useMemo(() => {
-      if (activeCriteria) {
-        if (isAlreadyScored && existingPanelScore) {
-          return {
-            scores: existingPanelScore.scores,
-            remarks: existingPanelScore.remarks,
-          };
-        } else {
-          const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
-          return {
-            scores: defaultScores,
-            remarks: '',
-          };
-        }
-      }
-      return { scores: {}, remarks: '' };
-    }, [activeCriteria, isAlreadyScored, existingPanelScore]),
   });
 
   useEffect(() => {
-    form.reset(
-      useMemo(() => {
-        if (activeCriteria) {
-          if (isAlreadyScored && existingPanelScore) {
-            return {
-              scores: existingPanelScore.scores,
-              remarks: existingPanelScore.remarks,
-            };
-          } else {
-            const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
-            return {
-              scores: defaultScores,
-              remarks: '',
-            };
-          }
-        }
-        return { scores: {}, remarks: '' };
-      }, [activeCriteria, isAlreadyScored, existingPanelScore])
-    );
+    let defaultValues;
+    if (activeCriteria) {
+      if (isAlreadyScored && existingPanelScore) {
+        defaultValues = {
+          scores: existingPanelScore.scores,
+          remarks: existingPanelScore.remarks,
+        };
+      } else {
+        const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
+        defaultValues = {
+          scores: defaultScores,
+          remarks: '',
+        };
+      }
+    } else {
+      defaultValues = { scores: {}, remarks: '' };
+    }
+    form.reset(defaultValues);
   }, [activeCriteria, isAlreadyScored, existingPanelScore, form]);
 
   const watchedScores = form.watch('scores');
