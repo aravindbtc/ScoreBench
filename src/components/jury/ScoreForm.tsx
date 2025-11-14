@@ -57,12 +57,6 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
 
     const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
     
-    const [isEditing, setIsEditing] = useState(!existingPanelScore);
-    
-    useEffect(() => {
-        setIsEditing(!existingPanelScore);
-    }, [existingPanelScore]);
-
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
     const form = useForm<ScoreFormData>({
@@ -73,8 +67,26 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                 [c.id]: existingPanelScore?.scores?.[c.id] ?? 5
             }), {}),
             remarks: existingPanelScore?.remarks ?? '',
-        }
+        },
     });
+
+    useEffect(() => {
+        // This effect synchronizes the form's disabled state with whether a score exists.
+        // It runs once when the component mounts and again if the score data changes.
+        if (existingPanelScore) {
+            form.reset({
+                 scores: activeCriteria.reduce((acc, c) => ({
+                    ...acc,
+                    [c.id]: existingPanelScore?.scores?.[c.id] ?? 5
+                }), {}),
+                remarks: existingPanelScore?.remarks ?? '',
+            });
+            form.disable();
+        } else {
+            form.enable();
+        }
+    }, [existingPanelScore, form, activeCriteria]);
+
 
     const watchedScores = form.watch('scores');
     
@@ -114,10 +126,12 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
             description: `Score submitted for ${team.teamName}.`,
         });
 
-        setIsEditing(false);
+        form.disable();
         setIsSubmitting(false);
     }
     
+    const isFormDisabled = form.formState.disabled;
+
     return (
         <Card>
             <CardHeader>
@@ -134,7 +148,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                                         key={criterion.id}
                                         control={form.control}
                                         name={`scores.${criterion.id}`}
-                                        disabled={!isEditing}
+                                        disabled={isFormDisabled}
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel title={criterion.description}>{criterion.name}</FormLabel>
@@ -165,7 +179,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                         <FormField
                             control={form.control}
                             name="remarks"
-                            disabled={!isEditing}
+                            disabled={isFormDisabled}
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Remarks</FormLabel>
@@ -181,21 +195,21 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                         <div className="text-2xl font-bold">
                             Total Score: <span className="text-primary">{totalScore} / {activeCriteria.length * 10}</span>
                         </div>
-                        {isEditing ? (
+                        {isFormDisabled ? (
+                             <div className="flex items-center gap-4">
+                                <span className="text-sm font-medium text-green-600">Score Submitted</span>
+                                <Button type="button" variant="outline" onClick={() => form.enable()}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit Score
+                                </Button>
+                            </div>
+                        ) : (
                             <Button type="submit" size="lg" disabled={isSubmitting || !form.formState.isValid}>
                                 {isSubmitting ? (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 ) : null}
                                 {isSubmitting ? 'Submitting...' : (existingPanelScore ? 'Update Score' : 'Submit Score')}
                             </Button>
-                        ) : (
-                             <div className="flex items-center gap-4">
-                                <span className="text-sm font-medium text-green-600">Score Submitted</span>
-                                <Button type="button" variant="outline" onClick={() => setIsEditing(true)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit Score
-                                </Button>
-                            </div>
                         )}
                     </CardFooter>
                 </form>
@@ -220,5 +234,7 @@ export function ScoreForm(props: ScoreFormProps) {
     );
   }
   
-  return <ScoreFormContent {...props} activeCriteria={activeCriteria} />
+  return <ScoreFormContent {...props} activeCriteria={activeCriteria} />;
 }
+
+    
