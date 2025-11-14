@@ -10,8 +10,7 @@ import Link from 'next/link';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export default function EvaluateTeamPage({ params }: { params: { teamId: string } }) {
-  const { teamId } = params;
+export default function EvaluateTeamPage({ params: { teamId } }: { params: { teamId: string } }) {
   const [juryPanel, setJuryPanel] = useState<number | null>(null);
   const firestore = useFirestore();
 
