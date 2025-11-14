@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -22,8 +23,8 @@ const fileSchema = z.object({
 });
 
 const teamSchema = z.object({
-  teamName: z.string().min(1),
-  projectName: z.string().min(1),
+  teamName: z.string().min(1, 'teamName is required.'),
+  projectName: z.string().min(1, 'projectName is required.'),
 });
 
 const teamsArraySchema = z.array(teamSchema);
@@ -46,7 +47,30 @@ export function TeamUploadForm() {
       try {
         const text = e.target?.result as string;
         const jsonData = JSON.parse(text);
-        const parsedTeams = teamsArraySchema.parse(jsonData);
+
+        // **INTELLIGENT PARSING LOGIC**
+        // If jsonData is not an array, try to find an array within it.
+        let teamsToParse = jsonData;
+        if (!Array.isArray(jsonData)) {
+          const arrayKey = Object.keys(jsonData).find(key => Array.isArray(jsonData[key]));
+          if (arrayKey) {
+            teamsToParse = jsonData[arrayKey];
+          } else {
+            throw new Error("Invalid JSON structure. No array of teams found in the file.");
+          }
+        }
+        
+        const parsedTeams = teamsArraySchema.parse(teamsToParse);
+
+        if (parsedTeams.length === 0) {
+          toast({
+            title: 'Empty Array',
+            description: 'The JSON file contains an empty array of teams.',
+            variant: 'destructive',
+          });
+          setIsUploading(false);
+          return;
+        }
 
         const batch = writeBatch(firestore);
         const teamsCollection = collection(firestore, 'teams');
@@ -64,10 +88,15 @@ export function TeamUploadForm() {
         form.reset();
       } catch (error) {
         console.error('Error uploading teams:', error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        let errorMessage = 'An unknown error occurred.';
+        if (error instanceof z.ZodError) {
+          errorMessage = 'The data does not match the required format. Each team must have a teamName and projectName.';
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
         toast({
           title: 'Upload Failed',
-          description: `Invalid JSON format or content. ${errorMessage}`,
+          description: errorMessage,
           variant: 'destructive',
         });
       } finally {
