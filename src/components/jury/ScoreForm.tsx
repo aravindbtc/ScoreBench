@@ -62,13 +62,13 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
     const { toast } = useToast();
     const firestore = useFirestore();
 
+    const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
+    const [isAlreadyScored, setIsAlreadyScored] = useState(!!existingPanelScore);
+
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
-    const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
-    const isAlreadyScored = !!existingPanelScore;
-
     const defaultValues = useMemo(() => {
-        if (isAlreadyScored && existingPanelScore) {
+        if (existingPanelScore) {
             return {
                 scores: existingPanelScore.scores,
                 remarks: existingPanelScore.remarks,
@@ -80,7 +80,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
             scores: defaultScores,
             remarks: '',
         };
-    }, [activeCriteria, isAlreadyScored, existingPanelScore]);
+    }, [activeCriteria, existingPanelScore]);
 
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
@@ -109,7 +109,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         
         const scoreDocRef = doc(firestore, 'scores', team.id);
         const panelField = `panel${juryPanel}`;
-        const maxScore = activeCriteria.length * 10;
+        const maxScore = activeCriteria.length > 0 ? activeCriteria.length * 10 : 0;
         const panelScoreData: Score = { ...data, total: totalScore, maxScore };
 
         // 1. Prepare data for all panels to calculate average
@@ -141,6 +141,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
 
         // 6. Disable the form and finalize UI state
         form.control.disable(); 
+        setIsAlreadyScored(true);
         setIsSubmitting(false);
     }
     
@@ -205,9 +206,11 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                         <div className="text-2xl font-bold">
                             Total Score: <span className="text-primary">{totalScore} / {activeCriteria.length * 10}</span>
                         </div>
-                        <Button type="submit" size="lg" disabled={form.formState.disabled || isSubmitting || !form.formState.isValid}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {form.formState.disabled ? 'Score Submitted' : isSubmitting ? 'Submitting...' : 'Submit Score'}
+                        <Button type="submit" size="lg" disabled={isAlreadyScored || isSubmitting || !form.formState.isValid}>
+                            {isSubmitting ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : null}
+                            {isAlreadyScored ? 'Score Submitted' : isSubmitting ? 'Submitting...' : 'Submit Score'}
                         </Button>
                     </CardFooter>
                 </form>
