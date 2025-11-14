@@ -1,7 +1,7 @@
 
+import 'dotenv/config'
 import { NextResponse } from 'next/server';
 import ImageKit from 'imagekit';
-import 'dotenv/config'
 
 export async function GET(request: Request) {
   const imagekit = new ImageKit({
