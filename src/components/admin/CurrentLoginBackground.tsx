@@ -10,25 +10,25 @@ import { Button } from '../ui/button';
 import { Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { doc } from 'firebase/firestore';
-import { useDoc } from '@/firebase';
+import { useDoc, useFirestore } from '@/firebase';
 import { db } from '@/lib/firebase';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export function CurrentLoginBackground() {
     const { toast } = useToast();
+    const firestore = useFirestore();
 
-    // Use a memoized reference for the useDoc hook
-    const loginBgConfigRef = useMemo(() => doc(db, 'appConfig', 'loginBackground'), []);
+    const loginBgConfigRef = useMemo(() => doc(firestore, 'appConfig', 'loginBackground'), [firestore]);
     const { data, isLoading, error } = useDoc<{imageUrl: string}>(loginBgConfigRef);
 
     const [imageUrl, setImageUrl] = useState<string | null>(null);
 
     useEffect(() => {
-        if (data) {
+        const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
+        if (data?.imageUrl) {
             setImageUrl(data.imageUrl);
         } else if (!isLoading) {
             // If there's no data from Firestore, use the local fallback
-            const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
             setImageUrl(fallback?.imageUrl || null);
         }
     }, [data, isLoading]);

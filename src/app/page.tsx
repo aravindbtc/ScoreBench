@@ -20,9 +20,12 @@ async function getLoginBackgroundUrl() {
       return docSnap.data()?.imageUrl;
     }
   } catch (error) {
-    console.error("Could not fetch login background from Firestore:", error);
+    // This might happen on first deploy or if Firestore rules are restrictive before login.
+    // We'll fall back to the placeholder image.
+    console.log("Could not fetch login background from Firestore, using fallback.");
   }
-  // Fallback to local placeholder if Firestore fails or doc doesn't exist
+  
+  // Always have a fallback to the placeholder image.
   const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
   return fallback?.imageUrl;
 }
