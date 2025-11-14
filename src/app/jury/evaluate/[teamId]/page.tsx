@@ -1,17 +1,17 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { doc } from 'firebase/firestore';
 import type { Team, TeamScores } from '@/lib/types';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { ScoreForm } from '@/components/jury/ScoreForm';
-import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function EvaluateTeamPage({ params }: { params: { teamId: string } }) {
+  const { teamId } = params;
   const [juryPanel, setJuryPanel] = useState<number | null>(null);
   const firestore = useFirestore();
 
@@ -22,10 +22,10 @@ export default function EvaluateTeamPage({ params }: { params: { teamId: string 
     }
   }, []);
 
-  const teamRef = useMemoFirebase(() => doc(firestore, 'teams', params.teamId), [firestore, params.teamId]);
+  const teamRef = useMemoFirebase(() => doc(firestore, 'teams', teamId), [firestore, teamId]);
   const { data: team, isLoading: teamLoading } = useDoc<Team>(teamRef);
 
-  const scoreRef = useMemoFirebase(() => doc(firestore, 'scores', params.teamId), [firestore, params.teamId]);
+  const scoreRef = useMemoFirebase(() => doc(firestore, 'scores', teamId), [firestore, teamId]);
   const { data: existingScores, isLoading: scoreLoading } = useDoc<TeamScores>(scoreRef);
 
   const isLoading = teamLoading || scoreLoading || !juryPanel || !team;
