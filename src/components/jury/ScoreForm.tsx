@@ -19,8 +19,7 @@ import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { generateTeamFeedback } from '@/ai/flows/generate-team-feedback';
-import { Wand2, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 
@@ -31,7 +30,6 @@ const createScoreSchema = (criteria: EvaluationCriterion[]) => {
     return z.object({
       scores: z.object({}),
       remarks: z.string().min(10, 'Please provide some detailed remarks.'),
-      aiFeedback: z.string().optional(),
     });
   }
 
@@ -43,7 +41,6 @@ const createScoreSchema = (criteria: EvaluationCriterion[]) => {
   return z.object({
     scores: z.object(schemaObject),
     remarks: z.string().min(10, 'Please provide some detailed remarks.'),
-    aiFeedback: z.string().optional(),
   });
 };
 
@@ -58,7 +55,6 @@ interface ScoreFormProps {
 export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
   const [totalScore, setTotalScore] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -89,7 +85,6 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
           form.reset({
               scores: existingPanelScore.scores,
               remarks: existingPanelScore.remarks,
-              aiFeedback: existingPanelScore.aiFeedback || '',
           });
       } else {
         // Otherwise, set default values
@@ -97,7 +92,6 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
         form.reset({
           scores: defaultScores,
           remarks: '',
-          aiFeedback: '',
         });
       }
     }
@@ -112,36 +106,6 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
     }
   }, [watchedScores]);
   
-  // AI Feedback Generation
-  const handleGenerateFeedback = async () => {
-    if (!activeCriteria) return;
-    setIsGenerating(true);
-    try {
-      const { scores } = form.getValues();
-      const input = activeCriteria.reduce((acc, criterion) => {
-        acc[criterion.name] = scores[criterion.id];
-        return acc;
-      }, {} as Record<string, number>);
-
-      const result = await generateTeamFeedback(input);
-      if (result?.feedback) {
-        form.setValue('aiFeedback', result.feedback);
-        toast({
-          title: 'AI Feedback Generated',
-          description: 'The AI-powered feedback has been added to the form.',
-        });
-      }
-    } catch (error) {
-      console.error('AI feedback generation failed:', error);
-      toast({
-        title: 'Generation Failed',
-        description: 'Could not generate AI feedback. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   // Form Submission
   async function onSubmit(data: ScoreFormData) {
@@ -201,7 +165,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
           <CardTitle>Evaluation for: {team.teamName}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-lg text-green-400">
+          <p className="text-center text-lg text-primary">
             You have already submitted your score for this team.
           </p>
         </CardContent>
@@ -266,31 +230,8 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
                 </FormItem>
               )}
             />
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <FormLabel>AI-Powered Feedback</FormLabel>
-                <Button type="button" size="sm" variant="outline" onClick={handleGenerateFeedback} disabled={isGenerating || form.formState.disabled}>
-                  {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
-                  Generate
-                </Button>
-              </div>
-               <FormField
-                control={form.control}
-                name="aiFeedback"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Textarea placeholder="Click 'Generate' to create AI-powered feedback..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
           </CardContent>
-          <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-b-lg border-t bg-muted/10 p-4">
+          <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-b-lg border-t bg-muted/20 p-4">
              <div className="text-2xl font-bold">
               Total Score: <span className="text-primary">{totalScore} / {activeCriteria ? activeCriteria.length * 10 : 0}</span>
             </div>
@@ -304,5 +245,3 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
     </Card>
   );
 }
-
-    
