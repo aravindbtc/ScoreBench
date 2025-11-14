@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,10 +10,12 @@ import Link from 'next/link';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useParams } from 'next/navigation';
+import { useAuthListener } from '@/hooks/use-auth-listener';
 
 export default function EvaluateTeamPage() {
   const params = useParams();
   const teamId = params.teamId as string;
+  const { user, isLoading: isAuthLoading } = useAuthListener('/jury');
 
   const [juryPanel, setJuryPanel] = useState<number | null>(null);
   const firestore = useFirestore();
@@ -24,13 +27,19 @@ export default function EvaluateTeamPage() {
     }
   }, []);
 
-  const teamRef = useMemoFirebase(() => doc(firestore, 'teams', teamId), [firestore, teamId]);
+  const teamRef = useMemoFirebase(() => {
+    if (!user || !teamId) return null; // Wait for user and teamId
+    return doc(firestore, 'teams', teamId);
+  }, [firestore, teamId, user]);
   const { data: team, isLoading: teamLoading } = useDoc<Team>(teamRef);
 
-  const scoreRef = useMemoFirebase(() => doc(firestore, 'scores', teamId), [firestore, teamId]);
+  const scoreRef = useMemoFirebase(() => {
+    if (!user || !teamId) return null; // Wait for user and teamId
+    return doc(firestore, 'scores', teamId);
+  }, [firestore, teamId, user]);
   const { data: existingScores, isLoading: scoreLoading } = useDoc<TeamScores>(scoreRef);
 
-  const isLoading = teamLoading || scoreLoading || !juryPanel || !team;
+  const isLoading = isAuthLoading || teamLoading || scoreLoading || !juryPanel || !team;
 
   return (
     <div className="space-y-6">
