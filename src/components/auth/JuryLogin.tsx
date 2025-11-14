@@ -14,14 +14,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import type { Jury } from '@/lib/types';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { Input } from '../ui/input';
+import { verifyJuryPassword } from '@/lib/actions';
 
 export function JuryLogin() {
   const [selectedJury, setSelectedJury] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
@@ -32,7 +36,8 @@ export function JuryLogin() {
   const status = error ? 'error' : statusIsLoading ? 'loading' : 'success';
 
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedJury) {
       toast({
         title: 'Selection Required',
@@ -42,17 +47,29 @@ export function JuryLogin() {
       return;
     }
     setIsLoading(true);
-    try {
-      const userCredential = await signInAnonymously(auth);
-      if (userCredential.user) {
-        localStorage.setItem('juryPanel', selectedJury);
-        router.push('/jury');
+
+    const result = await verifyJuryPassword(selectedJury, password);
+
+    if (result.success) {
+      try {
+        const userCredential = await signInAnonymously(auth);
+        if (userCredential.user) {
+          localStorage.setItem('juryPanel', selectedJury);
+          router.push('/jury');
+        }
+      } catch (error) {
+        console.error('Anonymous sign-in failed', error);
+        toast({
+          title: 'Login Failed',
+          description: 'Could not log you in. Please try again.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Anonymous sign-in failed', error);
-      toast({
+    } else {
+       toast({
         title: 'Login Failed',
-        description: 'Could not log you in. Please try again.',
+        description: result.message,
         variant: 'destructive',
       });
       setIsLoading(false);
@@ -60,7 +77,7 @@ export function JuryLogin() {
   };
 
   return (
-    <div className="space-y-4">
+    <form onSubmit={handleLogin} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="jury-select">Select Panel</Label>
         {status === 'loading' && <p>Loading panels...</p>}
@@ -91,10 +108,36 @@ export function JuryLogin() {
           </div>
         )}
       </div>
-      <Button onClick={handleLogin} disabled={isLoading || !selectedJury} className="w-full">
+
+       <div className="space-y-2">
+        <Label htmlFor="password">Panel Password</Label>
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="pr-10"
+            disabled={!selectedJury}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+            onClick={() => setShowPassword(!showPassword)}
+             disabled={!selectedJury}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </Button>
+        </div>
+      </div>
+
+      <Button type="submit" disabled={isLoading || !selectedJury || !password} className="w-full">
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Login as Jury
       </Button>
-    </div>
+    </form>
   );
 }

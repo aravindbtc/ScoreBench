@@ -81,11 +81,16 @@
         "panelNo": {
           "type": "number",
           "description": "The panel number assigned to the jury member."
+        },
+        "password": {
+          "type": "string",
+          "description": "Password for the jury panel."
         }
       },
       "required": [
         "name",
-        "panelNo"
+        "panelNo",
+        "password"
       ]
     },
     "EvaluationCriterion": {
@@ -149,7 +154,7 @@
           "schema": {
             "$ref": "#/entities/Jury"
           },
-          "description": "Stores information about jury members."
+          "description": "Stores information about jury members, including their passwords."
         }
       },
       {

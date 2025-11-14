@@ -9,6 +9,7 @@ export interface Jury {
   id: string;
   name: string;
   panelNo: number;
+  password?: string;
 }
 
 export interface Score {

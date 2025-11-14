@@ -18,13 +18,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
 
 const jurySchema = z.object({
   name: z.string().min(2, 'Jury name must be at least 2 characters.'),
   panelNo: z.coerce.number().int().min(1, 'Panel number must be at least 1.'),
+  password: z.string().min(4, 'Password must be at least 4 characters.'),
 });
 
 type JuryFormData = z.infer<typeof jurySchema>;
@@ -36,6 +37,7 @@ interface AddJuryDialogProps {
 
 export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -44,6 +46,7 @@ export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
     defaultValues: {
       name: '',
       panelNo: '' as any,
+      password: '',
     },
   });
 
@@ -112,6 +115,36 @@ export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
                   <FormControl>
                     <Input id="panelNo" type="number" placeholder="e.g., 4" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                 <FormItem>
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <FormControl>
+                        <Input
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Set a password for this panel"
+                            {...field}
+                            className="pr-10"
+                        />
+                    </FormControl>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                        onClick={() => setShowPassword(!showPassword)}
+                    >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

@@ -42,6 +42,7 @@ export function JuryManagement({ juries, onDeleteRequest }: JuryManagementProps)
           <TableRow>
             <TableHead>Panel Name</TableHead>
             <TableHead>Panel Number</TableHead>
+            <TableHead>Password</TableHead>
             <TableHead className="text-right w-[80px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -50,6 +51,7 @@ export function JuryManagement({ juries, onDeleteRequest }: JuryManagementProps)
             <TableRow key={jury.id}>
               <TableCell className="font-medium">{jury.name}</TableCell>
               <TableCell>{jury.panelNo}</TableCell>
+              <TableCell className='font-mono'>{jury.password}</TableCell>
               <TableCell className="text-right">
                 <Tooltip>
                   <TooltipTrigger asChild>
