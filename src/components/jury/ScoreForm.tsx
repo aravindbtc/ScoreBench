@@ -85,9 +85,16 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
         defaultValues: defaultValues,
-        disabled: isAlreadyScored,
     });
     
+    // If the form has been scored previously, disable it on mount.
+    useEffect(() => {
+        if (isAlreadyScored) {
+            form.control.disable();
+        }
+    }, [isAlreadyScored, form.control]);
+
+
     const watchedScores = form.watch('scores');
     useEffect(() => {
         if (watchedScores) {
