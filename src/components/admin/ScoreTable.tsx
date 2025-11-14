@@ -167,6 +167,9 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
             <TableHead className='w-[40px]'></TableHead>
             <TableHead>Team Name</TableHead>
             <TableHead>Project Name</TableHead>
+            <TableHead className="text-center w-[100px]">Panel 1</TableHead>
+            <TableHead className="text-center w-[100px]">Panel 2</TableHead>
+            <TableHead className="text-center w-[100px]">Panel 3</TableHead>
             <TableHead className="text-right w-[150px]">Average Score</TableHead>
             <TableHead className="text-right w-[80px]">Actions</TableHead>
           </TableRow>
@@ -178,10 +181,19 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
                     <>
                     <TableRow>
                         <TableCell>
-                        <AccordionTrigger className='p-0 [&[data-state=open]>svg]:text-primary'></AccordionTrigger>
+                            <AccordionTrigger className='p-0 [&[data-state=open]>svg]:text-primary'></AccordionTrigger>
                         </TableCell>
                         <TableCell className="font-medium">{item.teamName}</TableCell>
                         <TableCell>{item.projectName}</TableCell>
+                        <TableCell className="text-center">
+                            {item.scores.panel1 ? <Badge variant="outline">{item.scores.panel1.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
+                        </TableCell>
+                        <TableCell className="text-center">
+                            {item.scores.panel2 ? <Badge variant="outline">{item.scores.panel2.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
+                        </TableCell>
+                        <TableCell className="text-center">
+                            {item.scores.panel3 ? <Badge variant="outline">{item.scores.panel3.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
+                        </TableCell>
                         <TableCell className="text-right">
                         {item.scores.avgScore ? (
                             <Badge variant="secondary" className="text-lg font-bold text-primary">
@@ -205,7 +217,7 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell colSpan={5} className="p-0">
+                        <TableCell colSpan={8} className="p-0">
                         <AccordionContent>
                             <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
