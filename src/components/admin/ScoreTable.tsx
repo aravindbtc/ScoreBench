@@ -33,32 +33,38 @@ interface ScoreTableProps {
   onDeleteRequest: (team: CombinedScoreData) => void;
 }
 
-const PanelScoreDetails = ({ panelNo, score }: { panelNo: number, score?: Score }) => {
-  if (!score) {
+const PanelScoreDetails = ({ panelNo, scoreData }: { panelNo: number, scoreData?: Score }) => {
+  if (!scoreData) {
     return (
       <div className="p-4 text-sm text-center text-muted-foreground bg-muted/20 rounded-lg h-full flex items-center justify-center">Panel {panelNo}: No score submitted.</div>
     );
   }
+
+  const { scores, total, remarks, aiFeedback } = scoreData;
+  const maxScore = Object.keys(scores).length * 10;
+
   return (
     <Card className="bg-background/50 h-full">
         <CardHeader className="p-4">
-            <CardTitle className="text-base">Panel {panelNo} Score: <span className="text-primary">{score.total}</span></CardTitle>
+            <CardTitle className="text-base">Panel {panelNo} Score: <span className="text-primary">{total} / {maxScore}</span></CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-0 text-sm">
             <div>
                 <h4 className="font-semibold">Score Breakdown:</h4>
-                <p className="text-muted-foreground">
-                    Inn: {score.innovation}, Rel: {score.relevance}, Tech: {score.technical}, Pres: {score.presentation}, Feas: {score.feasibility}
+                <p className="text-muted-foreground flex flex-wrap gap-x-2">
+                  {Object.entries(scores).map(([key, value]) => (
+                    <span key={key}>{key.charAt(0).toUpperCase() + key.slice(1)}: {value}</span>
+                  ))}
                 </p>
             </div>
              <div>
                 <h4 className="font-semibold">Remarks:</h4>
-                <p className="text-muted-foreground italic">"{score.remarks}"</p>
+                <p className="text-muted-foreground italic">"{remarks}"</p>
             </div>
-             {score.aiFeedback && (
+             {aiFeedback && (
                 <div>
                     <h4 className="font-semibold">AI Feedback:</h4>
-                    <p className="text-muted-foreground italic">"{score.aiFeedback}"</p>
+                    <p className="text-muted-foreground italic">"{aiFeedback}"</p>
                 </div>
             )}
         </CardContent>
@@ -74,11 +80,22 @@ const ConsolidatedFeedback = ({ scores, teamId }: { scores: TeamScores, teamId: 
     const handleGenerate = async () => {
         setIsGenerating(true);
         try {
+            // Prepare dynamic input for the AI flow
+            const panelData = (panelScore?: Score) => {
+                if (!panelScore) return undefined;
+                return {
+                    scores: panelScore.scores,
+                    total: panelScore.total,
+                    remarks: panelScore.remarks,
+                };
+            };
+            
             const result = await generateConsolidatedFeedback({
-                panel1: scores.panel1,
-                panel2: scores.panel2,
-                panel3: scores.panel3,
+                panel1: panelData(scores.panel1),
+                panel2: panelData(scores.panel2),
+                panel3: panelData(scores.panel3),
             });
+
             if (result.feedback) {
                 const scoreDocRef = doc(firestore, 'scores', teamId);
                 setDocumentNonBlocking(scoreDocRef, { consolidatedFeedback: result.feedback }, { merge: true });
@@ -189,9 +206,9 @@ export function ScoreTable({ data, onDeleteRequest }: ScoreTableProps) {
                      <AccordionContent>
                       <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <PanelScoreDetails panelNo={1} score={item.scores.panel1} />
-                            <PanelScoreDetails panelNo={2} score={item.scores.panel2} />
-                            <PanelScoreDetails panelNo={3} score={item.scores.panel3} />
+                            <PanelScoreDetails panelNo={1} scoreData={item.scores.panel1} />
+                            <PanelScoreDetails panelNo={2} scoreData={item.scores.panel2} />
+                            <PanelScoreDetails panelNo={3} scoreData={item.scores.panel3} />
                         </div>
                         <div className="col-span-1 md:col-span-2 lg:col-span-1">
                             <ScoreRadarChart scores={item.scores} />

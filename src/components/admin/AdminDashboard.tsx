@@ -2,11 +2,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, doc, writeBatch } from 'firebase/firestore';
-import type { Team, TeamScores, CombinedScoreData, Jury } from '@/lib/types';
+import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
+import type { Team, TeamScores, CombinedScoreData, Jury, EvaluationCriterion } from '@/lib/types';
 import { ScoreTable } from './ScoreTable';
 import { Button } from '@/components/ui/button';
-import { Download, Loader2, PlusCircle, UserPlus } from 'lucide-react';
+import { Download, Loader2, PlusCircle, UserPlus, ListChecks } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { AddTeamDialog } from './AddTeamDialog';
 import {
@@ -27,10 +27,12 @@ import { AddJuryDialog } from './AddJuryDialog';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { TopTeamsBarChart } from './charts/TopTeamsBarChart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { CriteriaManagement } from './CriteriaManagement';
 
 export function AdminDashboard() {
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
   const [isAddJuryOpen, setIsAddJuryOpen] = useState(false);
+  const [isManageCriteriaOpen, setIsManageCriteriaOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{type: 'team' | 'jury', data: any} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
@@ -44,6 +46,10 @@ export function AdminDashboard() {
 
   const juriesQuery = useMemoFirebase(() => collection(firestore, 'juries'), [firestore]);
   const { data: juries, isLoading: juriesLoading } = useCollection<Jury>(juriesQuery);
+  
+  const criteriaQuery = useMemoFirebase(() => collection(firestore, 'evaluationCriteria'), [firestore]);
+  const { data: criteria, isLoading: criteriaLoading } = useCollection<EvaluationCriterion>(criteriaQuery);
+
 
   const combinedData: CombinedScoreData[] = useMemo(() => {
     if (!teams || !scores) return [];
@@ -56,21 +62,30 @@ export function AdminDashboard() {
     }).sort((a, b) => (b.scores.avgScore ?? 0) - (a.scores.avgScore ?? 0));
   }, [teams, scores]);
 
-  const handleExport = () => {
-    const dataForExport = combinedData.map(item => ({
-      'Team Name': item.teamName,
-      'Project Name': item.projectName,
-      'Panel 1 Score': item.scores.panel1?.total ?? 'N/A',
-      'Panel 2 Score': item.scores.panel2?.total ?? 'N/A',
-      'Panel 3 Score': item.scores.panel3?.total ?? 'N/A',
-      'Average Score': item.scores.avgScore ? item.scores.avgScore.toFixed(2) : 'N/A',
-      'Panel 1 Remarks': item.scores.panel1?.remarks ?? '',
-      'Panel 2 Remarks': item.scores.panel2?.remarks ?? '',
-      'Panel 3 Remarks': item.scores.panel3?.remarks ?? '',
-      'Panel 1 AI Feedback': item.scores.panel1?.aiFeedback ?? '',
-      'Panel 2 AI Feedback': item.scores.panel2?.aiFeedback ?? '',
-      'Panel 3 AI Feedback': item.scores.panel3?.aiFeedback ?? '',
-    }));
+  const handleExport = async () => {
+    const criteriaSnapshot = await getDocs(collection(firestore, 'evaluationCriteria'));
+    const allCriteria = criteriaSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as Omit<EvaluationCriterion, 'id'> }));
+    
+    const dataForExport = combinedData.map(item => {
+      const row: {[key: string]: any} = {
+        'Team Name': item.teamName,
+        'Project Name': item.projectName,
+        'Average Score': item.scores.avgScore ? item.scores.avgScore.toFixed(2) : 'N/A',
+      };
+      
+      for(let i = 1; i <= 3; i++) {
+        const panel = item.scores[`panel${i}` as keyof TeamScores] as Score | undefined;
+        row[`Panel ${i} Total Score`] = panel?.total ?? 'N/A';
+        for (const criterion of allCriteria) {
+          row[`P${i} ${criterion.name}`] = panel?.scores[criterion.id] ?? 'N/A';
+        }
+        row[`Panel ${i} Remarks`] = panel?.remarks ?? '';
+        row[`Panel ${i} AI Feedback`] = panel?.aiFeedback ?? '';
+      }
+      row['Consolidated Feedback'] = item.scores.consolidatedFeedback ?? '';
+
+      return row;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(dataForExport);
     const workbook = XLSX.utils.book_new();
@@ -83,17 +98,17 @@ export function AdminDashboard() {
     setIsDeleting(true);
     
     try {
+      const batch = writeBatch(firestore);
       if (itemToDelete.type === 'team') {
-        const batch = writeBatch(firestore);
         const teamDocRef = doc(firestore, 'teams', itemToDelete.data.id);
         const scoreDocRef = doc(firestore, 'scores', itemToDelete.data.id);
         batch.delete(teamDocRef);
         batch.delete(scoreDocRef);
-        await batch.commit();
       } else { // type is 'jury'
         const juryDocRef = doc(firestore, 'juries', itemToDelete.data.id);
-        await writeBatch(firestore).delete(juryDocRef).commit();
+        batch.delete(juryDocRef);
       }
+      await batch.commit();
       
       toast({
         title: `${itemToDelete.type.charAt(0).toUpperCase() + itemToDelete.type.slice(1)} Deleted`,
@@ -109,7 +124,7 @@ export function AdminDashboard() {
     }
   };
 
-  const isLoading = teamsLoading || scoresLoading || juriesLoading;
+  const isLoading = teamsLoading || scoresLoading || juriesLoading || criteriaLoading;
 
   return (
     <div className="space-y-4">
@@ -120,6 +135,7 @@ export function AdminDashboard() {
             <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
             <TabsTrigger value="teams">Team Management</TabsTrigger>
             <TabsTrigger value="juries">Jury Management</TabsTrigger>
+            <TabsTrigger value="criteria">Criteria</TabsTrigger>
           </TabsList>
            <div className="flex flex-wrap gap-2">
             <Button onClick={handleExport} variant="outline" disabled={isLoading || !combinedData.length}>
@@ -187,6 +203,15 @@ export function AdminDashboard() {
               </div>
               <JuryManagement juries={juries || []} onDeleteRequest={(jury) => setItemToDelete({type: 'jury', data: jury})} />
             </>
+          )}
+        </TabsContent>
+        <TabsContent value="criteria" className="mt-4">
+           {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <CriteriaManagement criteria={criteria || []} />
           )}
         </TabsContent>
       </Tabs>

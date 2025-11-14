@@ -12,11 +12,8 @@ export interface Jury {
 }
 
 export interface Score {
-  innovation: number;
-  relevance: number;
-  technical: number;
-  presentation: number;
-  feasibility: number;
+  // scores will be a map of criterion keys to numbers, e.g., { innovation: 8, relevance: 9 }
+  scores: { [key: string]: number };
   total: number;
   remarks: string;
   aiFeedback?: string;
@@ -41,3 +38,10 @@ export type ImagePlaceholder = {
   imageUrl: string;
   imageHint: string;
 };
+
+export interface EvaluationCriterion {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+}

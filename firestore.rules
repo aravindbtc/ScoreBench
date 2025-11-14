@@ -34,16 +34,15 @@ service cloud.firestore {
      */
     match /scores/{teamId} {
       allow read: if isSignedIn();
-      // Allow creation if the document doesn't exist yet.
       allow create: if isSignedIn();
-      // Allow update if the user is only changing their own panel's data.
-      // This prevents a jury member from overwriting another panel's score.
+      // Allow a jury to update ONLY their panel's data, or allow an admin to update avgScore or consolidatedFeedback.
       allow update: if isSignedIn() && (
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel1', 'avgScore']) && request.resource.data.panel1.keys().hasOnly(['innovation', 'relevance', 'technical', 'presentation', 'feasibility', 'total', 'remarks', 'aiFeedback'])) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel2', 'avgScore']) && request.resource.data.panel2.keys().hasOnly(['innovation', 'relevance', 'technical', 'presentation', 'feasibility', 'total', 'remarks', 'aiFeedback'])) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel3', 'avgScore']) && request.resource.data.panel3.keys().hasOnly(['innovation', 'relevance', 'technical', 'presentation', 'feasibility', 'total', 'remarks', 'aiFeedback']))
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel1']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel2']) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel3']) ||
+        (isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasAny(['avgScore', 'consolidatedFeedback']))
       );
-       // Allow admins (any signed-in user via server action) to delete.
+      // Allow admins to delete.
       allow delete: if isAdmin();
     }
 
@@ -64,6 +63,16 @@ service cloud.firestore {
      */
     match /appConfig/{docId} {
       allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    /**
+     * EvaluationCriteria Collection:
+     * - Juries (signed-in users) can read the criteria to build the form.
+     * - Only admins can change which criteria are active.
+     */
+    match /evaluationCriteria/{criterionId} {
+      allow read, list: if isSignedIn();
       allow write: if isAdmin();
     }
   }

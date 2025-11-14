@@ -7,6 +7,7 @@ import {
   Radar,
   RadarChart,
   Legend,
+  PolarRadiusAxis,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -15,6 +16,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import type { TeamScores } from '@/lib/types';
+import { useMemo } from 'react';
 
 interface ScoreRadarChartProps {
   scores: TeamScores;
@@ -37,17 +39,25 @@ const chartConfig = {
 
 export function ScoreRadarChart({ scores }: ScoreRadarChartProps) {
 
-  const criteria = ['innovation', 'relevance', 'technical', 'presentation', 'feasibility'];
-  
-  const chartData = criteria.map(criterion => {
-    let dataPoint: {[key: string]: string | number} = { criterion };
-    dataPoint.panel1 = scores.panel1?.[criterion as keyof typeof scores.panel1] ?? 0;
-    dataPoint.panel2 = scores.panel2?.[criterion as keyof typeof scores.panel2] ?? 0;
-    dataPoint.panel3 = scores.panel3?.[criterion as keyof typeof scores.panel3] ?? 0;
-    return dataPoint;
-  });
+  const { chartData, hasData } = useMemo(() => {
+    const allCriteria = new Set<string>();
+    if (scores.panel1) Object.keys(scores.panel1.scores).forEach(c => allCriteria.add(c));
+    if (scores.panel2) Object.keys(scores.panel2.scores).forEach(c => allCriteria.add(c));
+    if (scores.panel3) Object.keys(scores.panel3.scores).forEach(c => allCriteria.add(c));
 
-  const hasData = scores.panel1 || scores.panel2 || scores.panel3;
+    const criteria = Array.from(allCriteria);
+    
+    const data = criteria.map(criterion => {
+      let dataPoint: {[key: string]: string | number} = { criterion: criterion.charAt(0).toUpperCase() + criterion.slice(1) };
+      dataPoint.panel1 = scores.panel1?.scores[criterion] ?? 0;
+      dataPoint.panel2 = scores.panel2?.scores[criterion] ?? 0;
+      dataPoint.panel3 = scores.panel3?.scores[criterion] ?? 0;
+      return dataPoint;
+    });
+
+    return { chartData: data, hasData: data.length > 0 && (scores.panel1 || scores.panel2 || scores.panel3) };
+  }, [scores]);
+
 
   return (
     <Card>
@@ -66,6 +76,7 @@ export function ScoreRadarChart({ scores }: ScoreRadarChartProps) {
           <RadarChart data={chartData}>
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
             <PolarAngleAxis dataKey="criterion" />
+            <PolarRadiusAxis angle={90} domain={[0, 10]} tick={false} axisLine={false} />
             <PolarGrid />
             {scores.panel1 && <Radar name="Panel 1" dataKey="panel1" fill="var(--color-panel1)" fillOpacity={0.6} />}
             {scores.panel2 && <Radar name="Panel 2" dataKey="panel2" fill="var(--color-panel2)" fillOpacity={0.6} />}

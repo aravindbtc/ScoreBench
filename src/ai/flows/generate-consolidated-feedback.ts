@@ -4,21 +4,17 @@
 /**
  * @fileOverview AI-powered consolidated feedback generation for hackathon teams.
  *
- * - generateConsolidatedFeedback - A function that generates a single, comprehensive feedback summary
- *   for a team based on scores and remarks from multiple jury panels.
- * - GenerateConsolidatedFeedbackInput - The input type, containing optional data from up to three panels.
- * - GenerateConsolidatedFeedbackOutput - The return type, providing a single consolidated feedback string.
+ * - generateConsolidatedFeedback - Generates a comprehensive feedback summary from multiple jury panels.
+ * - GenerateConsolidatedFeedbackInput - Input type, containing optional data from up to three panels.
+ * - GenerateConsolidatedFeedbackOutput - Return type, providing a single consolidated feedback string.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
+// PanelScore now accepts a dynamic record for scores
 const PanelScoreSchema = z.object({
-  innovation: z.number(),
-  relevance: z.number(),
-  technical: z.number(),
-  presentation: z.number(),
-  feasibility: z.number(),
+  scores: z.record(z.string(), z.number()),
   total: z.number(),
   remarks: z.string(),
 });
@@ -63,33 +59,27 @@ Here is the data from the panels:
 
 {{#if panel1}}
 Panel 1 Scores:
-- Innovation: {{panel1.innovation}}
-- Relevance: {{panel1.relevance}}
-- Technical: {{panel1.technical}}
-- Presentation: {{panel1.presentation}}
-- Feasibility: {{panel1.feasibility}}
+{{#each panel1.scores}}
+- {{ @key }}: {{ this }}
+{{/each}}
 - TOTAL: {{panel1.total}}
 Panel 1 Remarks: "{{panel1.remarks}}"
 {{/if}}
 
 {{#if panel2}}
 Panel 2 Scores:
-- Innovation: {{panel2.innovation}}
-- Relevance: {{panel2.relevance}}
-- Technical: {{panel2.technical}}
-- Presentation: {{panel2.presentation}}
-- Feasibility: {{panel2.feasibility}}
+{{#each panel2.scores}}
+- {{ @key }}: {{ this }}
+{{/each}}
 - TOTAL: {{panel2.total}}
 Panel 2 Remarks: "{{panel2.remarks}}"
 {{/if}}
 
 {{#if panel3}}
 Panel 3 Scores:
-- Innovation: {{panel3.innovation}}
-- Relevance: {{panel3.relevance}}
-- Technical: {{panel3.technical}}
-- Presentation: {{panel3.presentation}}
-- Feasibility: {{panel3.feasibility}}
+{{#each panel3.scores}}
+- {{ @key }}: {{ this }}
+{{/each}}
 - TOTAL: {{panel3.total}}
 Panel 3 Remarks: "{{panel3.remarks}}"
 {{/if}}
