@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -138,9 +139,10 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                                         name={`scores.${criterion.id}`}
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel title={criterion.description}>{criterion.name}</FormLabel>
+                                                <FormLabel>{criterion.name}</FormLabel>
+                                                <FormDescription>{criterion.description}</FormDescription>
                                                 <FormControl>
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2 pt-2">
                                                         <Input
                                                             type="number"
                                                             min="1"
