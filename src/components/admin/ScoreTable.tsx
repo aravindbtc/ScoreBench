@@ -171,59 +171,61 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
             <TableHead className="text-right w-[80px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
-          <Accordion type="single" collapsible className="w-full">
-            {data.map((item) => (
-              <AccordionItem value={item.id} key={item.id} className="border-b-0">
-                <TableRow>
-                  <TableCell>
-                    <AccordionTrigger className='p-0 [&[data-state=open]>svg]:text-primary'></AccordionTrigger>
-                  </TableCell>
-                  <TableCell className="font-medium">{item.teamName}</TableCell>
-                  <TableCell>{item.projectName}</TableCell>
-                  <TableCell className="text-right">
-                    {item.scores.avgScore ? (
-                      <Badge variant="secondary" className="text-lg font-bold text-primary">
-                        {item.scores.avgScore.toFixed(2)}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline">N/A</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDeleteRequest(item); }}>
-                          <Trash2 className="h-4 w-4 text-destructive/70" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Delete Team</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell colSpan={5} className="p-0">
-                     <AccordionContent>
-                      <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <PanelScoreDetails panelNo={1} scoreData={item.scores.panel1} criteria={criteria} />
-                            <PanelScoreDetails panelNo={2} scoreData={item.scores.panel2} criteria={criteria} />
-                            <PanelScoreDetails panelNo={3} scoreData={item.scores.panel3} criteria={criteria} />
-                        </div>
-                        <div className="col-span-1 md:col-span-2 lg:col-span-1">
-                            <ScoreRadarChart scores={item.scores} criteria={criteria} />
-                        </div>
-                        <ConsolidatedFeedback scores={item.scores} teamId={item.id} />
-                      </div>
-                    </AccordionContent>
-                  </TableCell>
-                </TableRow>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </TableBody>
+        <Accordion type="single" collapsible asChild>
+            <TableBody>
+                {data.map((item) => (
+                <AccordionItem value={item.id} key={item.id} asChild>
+                    <>
+                    <TableRow>
+                        <TableCell>
+                        <AccordionTrigger className='p-0 [&[data-state=open]>svg]:text-primary'></AccordionTrigger>
+                        </TableCell>
+                        <TableCell className="font-medium">{item.teamName}</TableCell>
+                        <TableCell>{item.projectName}</TableCell>
+                        <TableCell className="text-right">
+                        {item.scores.avgScore ? (
+                            <Badge variant="secondary" className="text-lg font-bold text-primary">
+                            {item.scores.avgScore.toFixed(2)}
+                            </Badge>
+                        ) : (
+                            <Badge variant="outline">N/A</Badge>
+                        )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDeleteRequest(item); }}>
+                                <Trash2 className="h-4 w-4 text-destructive/70" />
+                            </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                            <p>Delete Team</p>
+                            </TooltipContent>
+                        </Tooltip>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell colSpan={5} className="p-0">
+                        <AccordionContent>
+                            <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <PanelScoreDetails panelNo={1} scoreData={item.scores.panel1} criteria={criteria} />
+                                <PanelScoreDetails panelNo={2} scoreData={item.scores.panel2} criteria={criteria} />
+                                <PanelScoreDetails panelNo={3} scoreData={item.scores.panel3} criteria={criteria} />
+                            </div>
+                            <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                                <ScoreRadarChart scores={item.scores} criteria={criteria} />
+                            </div>
+                            <ConsolidatedFeedback scores={item.scores} teamId={item.id} />
+                            </div>
+                        </AccordionContent>
+                        </TableCell>
+                    </TableRow>
+                    </>
+                </AccordionItem>
+                ))}
+            </TableBody>
+        </Accordion>
       </Table>
     </Card>
   );
