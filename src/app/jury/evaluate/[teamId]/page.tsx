@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,8 +8,12 @@ import { ScoreForm } from '@/components/jury/ScoreForm';
 import Link from 'next/link';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useParams } from 'next/navigation';
 
-export default function EvaluateTeamPage({ params: { teamId } }: { params: { teamId: string } }) {
+export default function EvaluateTeamPage() {
+  const params = useParams();
+  const teamId = params.teamId as string;
+
   const [juryPanel, setJuryPanel] = useState<number | null>(null);
   const firestore = useFirestore();
 
