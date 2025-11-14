@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useEffect, useState, useMemo } from 'react';
-import type { Team, TeamScores, EvaluationCriterion } from '@/lib/types';
+import type { Team, TeamScores, EvaluationCriterion, Score } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { doc, getDoc, setDoc, collection, query, where } from 'firebase/firestore';
+import { doc, collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { Input } from '../ui/input';
 
@@ -64,7 +64,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
 
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
-    const existingPanelScore = existingScores?.[`panel${juryPanel}` as keyof TeamScores];
+    const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
     const isAlreadyScored = !!existingPanelScore;
 
     const defaultValues = useMemo(() => {
@@ -73,13 +73,13 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                 scores: existingPanelScore.scores,
                 remarks: existingPanelScore.remarks,
             };
-        } else {
-            const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
-            return {
-                scores: defaultScores,
-                remarks: '',
-            };
         }
+        // Initialize with default score of 5 for each active criterion
+        const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
+        return {
+            scores: defaultScores,
+            remarks: '',
+        };
     }, [activeCriteria, isAlreadyScored, existingPanelScore]);
 
     const form = useForm<ScoreFormData>({
@@ -88,7 +88,6 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         disabled: isAlreadyScored,
     });
     
-    // Watch for changes in score inputs and recalculate the total
     const watchedScores = form.watch('scores');
     useEffect(() => {
         if (watchedScores) {
@@ -98,54 +97,44 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
     }, [watchedScores]);
 
 
-    async function onSubmit(data: ScoreFormData) {
+    function onSubmit(data: ScoreFormData) {
         setIsSubmitting(true);
-        try {
-            const maxScore = activeCriteria.length * 10;
-            const scoreData = { ...data, total: totalScore, maxScore };
-            const scoreDocRef = doc(firestore, 'scores', team.id);
-            const panelField = `panel${juryPanel}`;
+        
+        const scoreDocRef = doc(firestore, 'scores', team.id);
+        const panelField = `panel${juryPanel}`;
+        const maxScore = activeCriteria.length * 10;
+        const panelScoreData: Score = { ...data, total: totalScore, maxScore };
 
-            await setDoc(scoreDocRef, { [panelField]: scoreData }, { merge: true });
+        // 1. Prepare data for all panels to calculate average
+        const allPanelScores: (Score | undefined)[] = [
+            juryPanel === 1 ? panelScoreData : existingScores?.panel1,
+            juryPanel === 2 ? panelScoreData : existingScores?.panel2,
+            juryPanel === 3 ? panelScoreData : existingScores?.panel3,
+        ];
 
-            const updatedDocSnap = await getDoc(scoreDocRef);
-            if (updatedDocSnap.exists()) {
-                const docData = updatedDocSnap.data();
-                let total = 0;
-                let panelCount = 0;
-                if (docData.panel1) { total += docData.panel1.total; panelCount++; }
-                if (docData.panel2) { total += docData.panel2.total; panelCount++; }
-                if (docData.panel3) { total += docData.panel3.total; panelCount++; }
-                const avgScore = panelCount > 0 ? total / panelCount : 0;
-                setDocumentNonBlocking(scoreDocRef, { avgScore }, { merge: true });
-            }
+        // 2. Calculate new average score
+        const validScores = allPanelScores.filter((s): s is Score => s !== undefined);
+        const total = validScores.reduce((acc, s) => acc + s.total, 0);
+        const avgScore = validScores.length > 0 ? total / validScores.length : 0;
+        
+        // 3. Create final data object for Firestore
+        const finalData = {
+            [panelField]: panelScoreData,
+            avgScore: avgScore
+        };
 
-            toast({
-                title: 'Success!',
-                description: `Score submitted for ${team.teamName}.`,
-            });
-            form.control.disable(); // Disable form after successful submission
-        } catch (error) {
-            console.error('Error submitting score:', error);
-            // This will be handled by the global error handler
-        } finally {
-            setIsSubmitting(false); // Reset submitting state regardless of outcome
-        }
-    }
+        // 4. Update document non-blockingly
+        setDocumentNonBlocking(scoreDocRef, finalData, { merge: true });
+        
+        // 5. Provide immediate feedback to the user
+        toast({
+            title: 'Success!',
+            description: `Score submitted for ${team.teamName}.`,
+        });
 
-    if (isAlreadyScored && !isSubmitting) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Evaluation for: {team.teamName}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-center text-lg text-primary">
-                        You have already submitted your score for this team.
-                    </p>
-                </CardContent>
-            </Card>
-        );
+        // 6. Disable the form and finalize UI state
+        form.control.disable(); 
+        setIsSubmitting(false);
     }
     
     return (
@@ -211,7 +200,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                         </div>
                         <Button type="submit" size="lg" disabled={form.formState.disabled || isSubmitting || !form.formState.isValid}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isSubmitting ? 'Submitting...' : 'Submit Score'}
+                            {form.formState.disabled ? 'Score Submitted' : isSubmitting ? 'Submitting...' : 'Submit Score'}
                         </Button>
                     </CardFooter>
                 </form>
