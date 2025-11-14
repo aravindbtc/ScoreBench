@@ -77,7 +77,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
   });
 
   useEffect(() => {
-    let defaultValues;
+    let defaultValues: ScoreFormData;
     if (activeCriteria) {
       if (isAlreadyScored && existingPanelScore) {
         defaultValues = {
@@ -96,6 +96,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
     }
     form.reset(defaultValues);
   }, [activeCriteria, isAlreadyScored, existingPanelScore, form]);
+
 
   const watchedScores = form.watch('scores');
   useEffect(() => {
@@ -184,13 +185,16 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
                       <FormItem>
                         <FormLabel title={criterion.description}>{criterion.name}</FormLabel>
                         <FormControl>
-                           <Input
-                            type="number"
-                            min="1"
-                            max="10"
-                            {...field}
-                            className="text-lg font-bold w-24"
-                          />
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="1"
+                              max="10"
+                              {...field}
+                              className="text-lg font-bold w-24"
+                            />
+                            <span className="text-muted-foreground">/ 10</span>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
