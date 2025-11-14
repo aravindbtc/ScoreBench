@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useEffect, useState, useMemo } from 'react';
@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { generateTeamFeedback } from '@/ai/flows/generate-team-feedback';
 import { Wand2, Loader2 } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, query, where } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 
 // Schema is now generated dynamically
 const createScoreSchema = (criteria: EvaluationCriterion[]) => {
@@ -54,33 +54,29 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
 
   const criteriaQuery = useMemoFirebase(() => query(collection(firestore, 'evaluationCriteria'), where('active', '==', true)), [firestore]);
   const { data: activeCriteria, isLoading: criteriaLoading } = useCollection<EvaluationCriterion>(criteriaQuery);
+  
+  const scoreSchema = useMemo(() => {
+    return activeCriteria ? createScoreSchema(activeCriteria) : null;
+  }, [activeCriteria]);
 
   const isAlreadyScored = !!existingScores?.[`panel${juryPanel}` as keyof TeamScores];
 
-  // Initialize form at the top level
   const form = useForm<ScoreFormData>({
-    defaultValues: { scores: {}, remarks: '', aiFeedback: '' },
+    resolver: scoreSchema ? zodResolver(scoreSchema) : undefined,
     disabled: isAlreadyScored || isSubmitting,
   });
-
-  // Effect to update form resolver and default values when criteria change
+  
   useEffect(() => {
-    if (activeCriteria) {
-      const schema = createScoreSchema(activeCriteria);
-      // @ts-ignore - zodResolver has a slightly weird type but this works
-      form.resolver = zodResolver(schema);
-
-      const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
-      const currentValues = form.getValues();
-      
-      // Reset form with new schema and defaults, preserving remarks/AI feedback if they exist
+    if (activeCriteria && scoreSchema) {
       form.reset({
-        scores: defaultScores,
-        remarks: currentValues.remarks || '',
-        aiFeedback: currentValues.aiFeedback || '',
+        scores: activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {}),
+        remarks: '',
+        aiFeedback: '',
       });
+      // @ts-ignore
+      form.resolver = zodResolver(scoreSchema);
     }
-  }, [activeCriteria, form]);
+  }, [activeCriteria, scoreSchema, form]);
 
 
   const watchedScores = form.watch('scores');
@@ -142,7 +138,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
         if (docData.panel2) { total += docData.panel2.total; panelCount++; }
         if (docData.panel3) { total += docData.panel3.total; panelCount++; }
         const avgScore = panelCount > 0 ? total / panelCount : 0;
-        await setDoc(scoreDocRef, { avgScore }, { merge: true });
+        setDocumentNonBlocking(scoreDocRef, { avgScore }, { merge: true });
       }
 
       toast({
@@ -258,7 +254,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
              <div className="text-2xl font-bold">
               Total Score: <span className="text-primary">{totalScore} / {activeCriteria ? activeCriteria.length * 10 : 0}</span>
             </div>
-            <Button type="submit" size="lg" disabled={form.formState.disabled}>
+            <Button type="submit" size="lg" disabled={form.formState.disabled || !form.formState.isValid}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit Score
             </Button>
