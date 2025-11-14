@@ -33,7 +33,7 @@ const createScoreSchema = (criteria: EvaluationCriterion[]) => {
 
   return z.object({
     scores: z.object(schemaObject),
-    remarks: z.string(), // Remarks are optional
+    remarks: z.string(),
   });
 };
 
@@ -51,15 +51,13 @@ interface ScoreFormContentProps extends ScoreFormProps {
 }
 
 function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: ScoreFormContentProps) {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const { toast } = useToast();
     const firestore = useFirestore();
+    const { toast } = useToast();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
     
-    // This state now controls whether the form is in "edit" or "view" mode.
     const [isEditing, setIsEditing] = useState(!existingPanelScore);
-    const [totalScore, setTotalScore] = useState(0);
 
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
@@ -70,7 +68,6 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         };
 
         const scoreValues = { ...initialScore.scores };
-        // Ensure all active criteria have a default value
         activeCriteria.forEach(c => {
             if (scoreValues[c.id] === undefined) {
                 scoreValues[c.id] = 5;
@@ -88,22 +85,29 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         defaultValues,
     });
     
-    // Watch scores to calculate total in real-time
     const watchedScores = form.watch('scores');
-    useEffect(() => {
-        if (watchedScores) {
-            const sum = Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
-            setTotalScore(sum);
-        } else {
-             const sum = Object.values(defaultValues.scores).reduce((acc, current) => acc + (Number(current) || 0), 0);
-             setTotalScore(sum);
+    
+    // Calculate total score directly from watched values.
+    const totalScore = useMemo(() => {
+        if (!watchedScores) {
+            return Object.values(defaultValues.scores).reduce((acc, current) => acc + (Number(current) || 0), 0);
         }
+        return Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
     }, [watchedScores, defaultValues.scores]);
 
-    // Reset the form's default values if the underlying data changes
     useEffect(() => {
         form.reset(defaultValues);
     }, [defaultValues, form]);
+
+    useEffect(() => {
+        if (isEditing) {
+            // Enable all fields for editing
+            Object.keys(form.getValues().scores).forEach(key => {
+                form.control.register(`scores.${key}`);
+            });
+            form.control.register('remarks');
+        }
+    }, [isEditing, form]);
 
 
     function onSubmit(data: ScoreFormData) {
@@ -114,34 +118,28 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         const maxScore = activeCriteria.length > 0 ? activeCriteria.length * 10 : 0;
         const panelScoreData: Score = { ...data, total: totalScore, maxScore };
 
-        // 1. Prepare data for all panels to calculate average
         const allPanelScores: (Score | undefined)[] = [
             juryPanel === 1 ? panelScoreData : existingScores?.panel1,
             juryPanel === 2 ? panelScoreData : existingScores?.panel2,
             juryPanel === 3 ? panelScoreData : existingScores?.panel3,
         ];
 
-        // 2. Calculate new average score
         const validScores = allPanelScores.filter((s): s is Score => s !== undefined && s.total !== undefined);
         const total = validScores.reduce((acc, s) => acc + s.total, 0);
         const avgScore = validScores.length > 0 ? total / validScores.length : 0;
         
-        // 3. Create final data object for Firestore
         const finalData = {
             [panelField]: panelScoreData,
             avgScore: avgScore
         };
 
-        // 4. Update document non-blockingly
         setDocumentNonBlocking(scoreDocRef, finalData, { merge: true });
         
-        // 5. Provide immediate feedback to the user
         toast({
             title: 'Success!',
             description: `Score submitted for ${team.teamName}.`,
         });
 
-        // 6. Disable the form and finalize UI state
         setIsEditing(false);
         setIsSubmitting(false);
     }
@@ -196,7 +194,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                             disabled={!isEditing}
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Remarks (Optional)</FormLabel>
+                                    <FormLabel>Remarks</FormLabel>
                                     <FormControl>
                                         <Textarea placeholder="Provide your detailed feedback here..." {...field} />
                                     </FormControl>
