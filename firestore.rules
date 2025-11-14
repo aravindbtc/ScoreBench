@@ -72,7 +72,7 @@ service cloud.firestore {
      * - Only admins can change which criteria are active.
      */
     match /evaluationCriteria/{criterionId} {
-      allow read, list: if isSignedIn();
+      allow read, list: if true;
       allow write: if isAdmin();
     }
   }
