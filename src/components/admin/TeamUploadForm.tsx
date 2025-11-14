@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import type { Team } from '@/lib/types';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 
@@ -49,7 +48,6 @@ export function TeamUploadForm() {
         const jsonData = JSON.parse(text);
 
         // **INTELLIGENT PARSING LOGIC**
-        // If jsonData is not an array, try to find an array within it.
         let teamsToParse = jsonData;
         if (!Array.isArray(jsonData)) {
           const arrayKey = Object.keys(jsonData).find(key => Array.isArray(jsonData[key]));
@@ -59,8 +57,15 @@ export function TeamUploadForm() {
             throw new Error("Invalid JSON structure. No array of teams found in the file.");
           }
         }
+
+        // **FLEXIBLE FIELD MAPPING**
+        // Pre-process the array to map different possible key names to our schema.
+        const mappedTeams = teamsToParse.map((team: any) => ({
+            teamName: team.teamName || team.team_name,
+            projectName: team.projectName || team.project_title || team.projectTitle
+        }));
         
-        const parsedTeams = teamsArraySchema.parse(teamsToParse);
+        const parsedTeams = teamsArraySchema.parse(mappedTeams);
 
         if (parsedTeams.length === 0) {
           toast({
@@ -90,7 +95,7 @@ export function TeamUploadForm() {
         console.error('Error uploading teams:', error);
         let errorMessage = 'An unknown error occurred.';
         if (error instanceof z.ZodError) {
-          errorMessage = 'The data does not match the required format. Each team must have a teamName and projectName.';
+          errorMessage = 'The data does not match the required format. Each team must have a teamName/team_name and projectName/project_title.';
         } else if (error instanceof Error) {
           errorMessage = error.message;
         }
