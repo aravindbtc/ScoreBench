@@ -57,42 +57,30 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
 
     const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
     
-    // isEditing state is now managed only by user interaction.
-    const [isEditing, setIsEditing] = useState(() => !existingPanelScore);
+    const [isEditing, setIsEditing] = useState(!existingPanelScore);
 
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
-        defaultValues: useMemo(() => {
-            const initialScore = existingPanelScore || {
-                scores: activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {}),
-                remarks: '',
-            };
-
-            const scoreValues = { ...initialScore.scores };
-            activeCriteria.forEach(c => {
-                if (scoreValues[c.id] === undefined) {
-                    scoreValues[c.id] = 5;
-                }
-            });
-
-            return {
-                scores: scoreValues,
-                remarks: initialScore.remarks,
-            };
-        }, [activeCriteria, existingPanelScore]),
     });
-    
-    // Reset the form if the team changes or data loads after initial render
+
+    // Effect to update the form's default values and editing state when data loads
     useEffect(() => {
-        form.reset(form.formState.defaultValues);
+        const defaultValues = {
+            scores: activeCriteria.reduce((acc, c) => ({
+                ...acc,
+                [c.id]: existingPanelScore?.scores?.[c.id] ?? 5
+            }), {}),
+            remarks: existingPanelScore?.remarks ?? '',
+        };
+        form.reset(defaultValues);
         setIsEditing(!existingPanelScore);
-    }, [team.id, existingPanelScore, form]);
+    }, [existingPanelScore, activeCriteria, form]);
+
 
     const watchedScores = form.watch('scores');
     
-    // Calculate total score directly from watched values.
     const totalScore = useMemo(() => {
         if (!watchedScores) return 0;
         return Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
