@@ -1,7 +1,7 @@
 
 "use client"
 
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, LabelList } from "recharts"
 import {
   ChartContainer,
   ChartTooltip,
@@ -40,7 +40,7 @@ export function TopTeamsBarChart({ data }: TopTeamsBarChartProps) {
         accessibilityLayer
         data={chartData}
         margin={{
-          top: 20,
+          top: 30, // Increased top margin for labels
           right: 20,
           left: 0,
           bottom: 5,
@@ -58,7 +58,15 @@ export function TopTeamsBarChart({ data }: TopTeamsBarChartProps) {
           cursor={false}
           content={<ChartTooltipContent indicator="line" />}
         />
-        <Bar dataKey="avgScore" fill="var(--color-avgScore)" radius={4} />
+        <Bar dataKey="avgScore" fill="var(--color-avgScore)" radius={4}>
+           <LabelList 
+                dataKey="avgScore" 
+                position="top" 
+                offset={8} 
+                className="fill-foreground"
+                fontSize={12} 
+            />
+        </Bar>
       </BarChart>
     </ChartContainer>
   )

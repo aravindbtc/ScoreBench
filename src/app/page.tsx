@@ -7,13 +7,28 @@ import { AdminLogin } from '@/components/auth/AdminLogin';
 import { AppLogo } from '@/components/layout/AppLogo';
 import { LoginBackground } from '@/components/auth/LoginBackground';
 import { Skeleton } from '@/components/ui/skeleton';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-export default function LoginPage() {
-  // Directly read the background image URL from the local JSON file.
-  // This ensures stability and availability on any hosting platform.
-  const background = PlaceHolderImages.find((img) => img.id === 'login-background');
-  const backgroundImageUrl = background?.imageUrl;
+async function getLoginBackgroundUrl() {
+  try {
+    const docRef = doc(db, 'appConfig', 'loginBackground');
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return docSnap.data()?.imageUrl;
+    }
+  } catch (error) {
+    console.error("Could not fetch login background from Firestore:", error);
+  }
+  // Fallback to local placeholder if Firestore fails or doc doesn't exist
+  const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
+  return fallback?.imageUrl;
+}
+
+export default async function LoginPage() {
+  const backgroundImageUrl = await getLoginBackgroundUrl();
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
