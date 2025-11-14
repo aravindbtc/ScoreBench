@@ -57,7 +57,12 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
 
     const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
     
-    const [isEditing, setIsEditing] = useState(!existingPanelScore);
+    // Correctly manage isEditing state
+    const [isEditing, setIsEditing] = useState(() => !existingPanelScore);
+
+    useEffect(() => {
+        setIsEditing(!existingPanelScore);
+    }, [existingPanelScore]);
 
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
@@ -85,6 +90,11 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         defaultValues,
     });
     
+    // Reset the form if the default values change (e.g., Firestore data loads)
+    useEffect(() => {
+        form.reset(defaultValues);
+    }, [form, defaultValues]);
+    
     const watchedScores = form.watch('scores');
     
     // Calculate total score directly from watched values.
@@ -94,21 +104,6 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         }
         return Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
     }, [watchedScores, defaultValues.scores]);
-
-    useEffect(() => {
-        form.reset(defaultValues);
-    }, [defaultValues, form]);
-
-    useEffect(() => {
-        if (isEditing) {
-            // Enable all fields for editing
-            Object.keys(form.getValues().scores).forEach(key => {
-                form.control.register(`scores.${key}`);
-            });
-            form.control.register('remarks');
-        }
-    }, [isEditing, form]);
-
 
     function onSubmit(data: ScoreFormData) {
         setIsSubmitting(true);
