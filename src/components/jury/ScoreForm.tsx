@@ -69,7 +69,9 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
   const isAlreadyScored = !!existingPanelScore;
 
   const defaultValues = useMemo(() => {
-    if (!activeCriteria) return undefined;
+    if (!activeCriteria) {
+        return undefined;
+    }
     
     if (isAlreadyScored && existingPanelScore) {
       return {
@@ -141,7 +143,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
     }
   }
   
-  if (criteriaLoading || !activeCriteria) {
+  if (criteriaLoading || !activeCriteria || !defaultValues) {
     return (
       <Card>
         <CardContent className="flex justify-center items-center h-64">
