@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -22,10 +23,8 @@ import { doc, getDoc, setDoc, collection, query, where } from 'firebase/firestor
 import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { Input } from '../ui/input';
 
-// This function creates the validation schema dynamically based on the active criteria.
 const createScoreSchema = (criteria: EvaluationCriterion[]) => {
   if (criteria.length === 0) {
-    // If there are no criteria, the schema only requires remarks.
     return z.object({
       scores: z.object({}),
       remarks: z.string().min(10, 'Please provide some detailed remarks.'),
@@ -33,7 +32,6 @@ const createScoreSchema = (criteria: EvaluationCriterion[]) => {
   }
 
   const schemaObject = criteria.reduce((acc, criterion) => {
-    // Use coerce to handle number conversion from input fields
     acc[criterion.id] = z.coerce.number()
         .min(1, { message: "Must be at least 1." })
         .max(10, { message: "Must be 10 or less." });
@@ -70,29 +68,35 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
   const existingPanelScore = existingScores?.[`panel${juryPanel}` as keyof TeamScores];
   const isAlreadyScored = !!existingPanelScore;
 
+  const defaultValues = useMemo(() => {
+    if (!activeCriteria) return undefined;
+    
+    if (isAlreadyScored && existingPanelScore) {
+      return {
+        scores: existingPanelScore.scores,
+        remarks: existingPanelScore.remarks,
+      };
+    } else {
+      const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
+      return {
+        scores: defaultScores,
+        remarks: '',
+      };
+    }
+  }, [activeCriteria, isAlreadyScored, existingPanelScore]);
+
+
   const form = useForm<ScoreFormData>({
     resolver: zodResolver(scoreSchema),
+    defaultValues: defaultValues,
     disabled: isAlreadyScored || isSubmitting,
   });
 
   useEffect(() => {
-    if (activeCriteria) {
-        let defaultValues: ScoreFormData;
-        if (isAlreadyScored && existingPanelScore) {
-            defaultValues = {
-            scores: existingPanelScore.scores,
-            remarks: existingPanelScore.remarks,
-            };
-        } else {
-            const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
-            defaultValues = {
-            scores: defaultScores,
-            remarks: '',
-            };
-        }
+    if (defaultValues) {
         form.reset(defaultValues);
     }
-  }, [activeCriteria, isAlreadyScored, existingPanelScore, form]);
+  }, [defaultValues, form]);
 
 
   const watchedScores = form.watch('scores');
@@ -137,7 +141,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
     }
   }
   
-  if (criteriaLoading) {
+  if (criteriaLoading || !activeCriteria) {
     return (
       <Card>
         <CardContent className="flex justify-center items-center h-64">
