@@ -104,7 +104,6 @@ export function JuryDashboard() {
                             variant={isSelected ? "secondary" : "default"}
                             size="sm" 
                             onClick={() => setSelectedTeamId(team.id)}
-                            disabled={status === 'scored'}
                           >
                           {status === 'scored' ? 'View Score' : 'Score Now'}
                          </Button>
