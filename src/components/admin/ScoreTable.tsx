@@ -21,13 +21,14 @@ import type { CombinedScoreData, Score, TeamScores, EvaluationCriterion } from '
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Loader2, Trash2, Wand2 } from 'lucide-react';
+import { Loader2, Trash2, Wand2, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { generateConsolidatedFeedback } from '@/ai/flows/generate-consolidated-feedback';
 import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { ScoreRadarChart } from './charts/ScoreRadarChart';
+import { cn } from '@/lib/utils';
 
 interface ScoreTableProps {
   data: CombinedScoreData[];
@@ -148,6 +149,8 @@ const ConsolidatedFeedback = ({ scores, teamId }: { scores: TeamScores, teamId: 
 
 
 export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps) {
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
+
   if (data.length === 0) {
     return (
       <Card className="text-center p-8">
@@ -156,6 +159,11 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
       </Card>
     );
   }
+
+  const toggleItem = (itemId: string) => {
+    setOpenItemId(prevId => prevId === itemId ? null : itemId);
+  }
+
   return (
     <Card>
         <CardHeader>
@@ -175,52 +183,54 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
                 <TableHead className="text-right w-[80px]">Actions</TableHead>
             </TableRow>
             </TableHeader>
-            <Accordion type="single" collapsible asChild>
-                <TableBody>
-                    {data.map((item) => (
-                        <AccordionItem value={item.id} key={item.id} asChild>
-                             <React.Fragment>
-                                <TableRow>
-                                    <TableCell>
-                                        <AccordionTrigger className='p-0 [&[data-state=open]>svg]:text-primary'></AccordionTrigger>
-                                    </TableCell>
-                                    <TableCell className="font-medium">{item.teamName}</TableCell>
-                                    <TableCell>{item.projectName}</TableCell>
-                                    <TableCell className="text-center">
-                                        {item.scores.panel1 ? <Badge variant="outline">{item.scores.panel1.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        {item.scores.panel2 ? <Badge variant="outline">{item.scores.panel2.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        {item.scores.panel3 ? <Badge variant="outline">{item.scores.panel3.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                    {item.scores.avgScore ? (
-                                        <Badge variant="secondary" className="text-lg font-bold text-primary">
-                                        {item.scores.avgScore.toFixed(2)}
-                                        </Badge>
-                                    ) : (
-                                        <Badge variant="outline">N/A</Badge>
-                                    )}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDeleteRequest(item); }}>
-                                            <Trash2 className="h-4 w-4 text-destructive/70" />
-                                        </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                        <p>Delete Team</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                    </TableCell>
-                                </TableRow>
+            <TableBody>
+                {data.map((item) => {
+                    const isOpen = openItemId === item.id;
+                    return (
+                        <React.Fragment key={item.id}>
+                            <TableRow>
+                                <TableCell>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleItem(item.id)}>
+                                        <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                                    </Button>
+                                </TableCell>
+                                <TableCell className="font-medium">{item.teamName}</TableCell>
+                                <TableCell>{item.projectName}</TableCell>
+                                <TableCell className="text-center">
+                                    {item.scores.panel1 ? <Badge variant="outline">{item.scores.panel1.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                    {item.scores.panel2 ? <Badge variant="outline">{item.scores.panel2.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                    {item.scores.panel3 ? <Badge variant="outline">{item.scores.panel3.total}</Badge> : <span className="text-muted-foreground">N/A</span>}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                {item.scores.avgScore ? (
+                                    <Badge variant="secondary" className="text-lg font-bold text-primary">
+                                    {item.scores.avgScore.toFixed(2)}
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="outline">N/A</Badge>
+                                )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDeleteRequest(item); }}>
+                                        <Trash2 className="h-4 w-4 text-destructive/70" />
+                                    </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                    <p>Delete Team</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                </TableCell>
+                            </TableRow>
+                            {isOpen && (
                                 <TableRow>
                                     <TableCell colSpan={8} className="p-0">
-                                        <AccordionContent>
-                                            <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="bg-muted/30 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                             <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <PanelScoreDetails panelNo={1} scoreData={item.scores.panel1} criteria={criteria} />
                                                 <PanelScoreDetails panelNo={2} scoreData={item.scores.panel2} criteria={criteria} />
@@ -230,16 +240,16 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
                                                 <ScoreRadarChart scores={item.scores} criteria={criteria} />
                                             </div>
                                             <ConsolidatedFeedback scores={item.scores} teamId={item.id} />
-                                            </div>
-                                        </AccordionContent>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
-                            </React.Fragment>
-                        </AccordionItem>
-                    ))}
-                </TableBody>
-            </Accordion>
+                            )}
+                        </React.Fragment>
+                    )
+                })}
+            </TableBody>
         </Table>
     </Card>
   );
 }
+
