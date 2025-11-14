@@ -162,24 +162,24 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
             <CardTitle>Leaderboard</CardTitle>
             <p className="text-muted-foreground">Detailed scores for all participating teams.</p>
         </CardHeader>
-        <Accordion type="single" collapsible asChild>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead className='w-[40px]'></TableHead>
-                    <TableHead>Team Name</TableHead>
-                    <TableHead>Project Name</TableHead>
-                    <TableHead className="text-center w-[100px]">Panel 1</TableHead>
-                    <TableHead className="text-center w-[100px]">Panel 2</TableHead>
-                    <TableHead className="text-center w-[100px]">Panel 3</TableHead>
-                    <TableHead className="text-right w-[150px]">Average Score</TableHead>
-                    <TableHead className="text-right w-[80px]">Actions</TableHead>
-                </TableRow>
-                </TableHeader>
+        <Table>
+            <TableHeader>
+            <TableRow>
+                <TableHead className='w-[40px]'></TableHead>
+                <TableHead>Team Name</TableHead>
+                <TableHead>Project Name</TableHead>
+                <TableHead className="text-center w-[100px]">Panel 1</TableHead>
+                <TableHead className="text-center w-[100px]">Panel 2</TableHead>
+                <TableHead className="text-center w-[100px]">Panel 3</TableHead>
+                <TableHead className="text-right w-[150px]">Average Score</TableHead>
+                <TableHead className="text-right w-[80px]">Actions</TableHead>
+            </TableRow>
+            </TableHeader>
+            <Accordion type="single" collapsible asChild>
                 <TableBody>
                     {data.map((item) => (
-                         <AccordionItem value={item.id} key={item.id} asChild>
-                            <React.Fragment>
+                        <AccordionItem value={item.id} key={item.id} asChild>
+                             <React.Fragment>
                                 <TableRow>
                                     <TableCell>
                                         <AccordionTrigger className='p-0 [&[data-state=open]>svg]:text-primary'></AccordionTrigger>
@@ -238,8 +238,8 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
                         </AccordionItem>
                     ))}
                 </TableBody>
-            </Table>
-        </Accordion>
+            </Accordion>
+        </Table>
     </Card>
   );
 }
