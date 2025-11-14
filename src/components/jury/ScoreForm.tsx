@@ -15,13 +15,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { Input } from '../ui/input';
 
 // This function creates the validation schema dynamically based on the active criteria.
 const createScoreSchema = (criteria: EvaluationCriterion[]) => {
@@ -34,9 +34,12 @@ const createScoreSchema = (criteria: EvaluationCriterion[]) => {
   }
 
   const schemaObject = criteria.reduce((acc, criterion) => {
-    acc[criterion.id] = z.number().min(1).max(10);
+    // Use coerce to handle number conversion from input fields
+    acc[criterion.id] = z.coerce.number()
+        .min(1, { message: "Must be at least 1." })
+        .max(10, { message: "Must be 10 or less." });
     return acc;
-  }, {} as Record<string, z.ZodNumber>);
+  }, {} as Record<string, z.ZodTypeAny>);
 
   return z.object({
     scores: z.object(schemaObject),
@@ -58,56 +61,68 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
 
-  // Fetch only the active evaluation criteria
   const criteriaQuery = useMemoFirebase(() => query(collection(firestore, 'evaluationCriteria'), where('active', '==', true)), [firestore]);
   const { data: activeCriteria, isLoading: criteriaLoading } = useCollection<EvaluationCriterion>(criteriaQuery);
   
-  // Memoize the schema creation to avoid re-creating it on every render
   const scoreSchema = useMemo(() => {
     return activeCriteria ? createScoreSchema(activeCriteria) : createScoreSchema([]);
   }, [activeCriteria]);
 
-  // Check if this panel has already submitted a score for this team
   const existingPanelScore = existingScores?.[`panel${juryPanel}` as keyof TeamScores];
   const isAlreadyScored = !!existingPanelScore;
 
-  // Initialize the form
   const form = useForm<ScoreFormData>({
     resolver: zodResolver(scoreSchema),
     disabled: isAlreadyScored || isSubmitting,
+    defaultValues: useMemo(() => {
+      if (activeCriteria) {
+        if (isAlreadyScored && existingPanelScore) {
+          return {
+            scores: existingPanelScore.scores,
+            remarks: existingPanelScore.remarks,
+          };
+        } else {
+          const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
+          return {
+            scores: defaultScores,
+            remarks: '',
+          };
+        }
+      }
+      return { scores: {}, remarks: '' };
+    }, [activeCriteria, isAlreadyScored, existingPanelScore]),
   });
 
-  // Effect to reset form values when criteria or team changes
   useEffect(() => {
-    if (activeCriteria) {
-      // If a score already exists, populate the form with those values
-      if (isAlreadyScored && existingPanelScore) {
-          form.reset({
+    form.reset(
+      useMemo(() => {
+        if (activeCriteria) {
+          if (isAlreadyScored && existingPanelScore) {
+            return {
               scores: existingPanelScore.scores,
               remarks: existingPanelScore.remarks,
-          });
-      } else {
-        // Otherwise, set default values
-        const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
-        form.reset({
-          scores: defaultScores,
-          remarks: '',
-        });
-      }
-    }
-  }, [activeCriteria, team, form, isAlreadyScored, existingPanelScore]);
+            };
+          } else {
+            const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
+            return {
+              scores: defaultScores,
+              remarks: '',
+            };
+          }
+        }
+        return { scores: {}, remarks: '' };
+      }, [activeCriteria, isAlreadyScored, existingPanelScore])
+    );
+  }, [activeCriteria, isAlreadyScored, existingPanelScore, form]);
 
-  // Watch for changes in score values to calculate the total
   const watchedScores = form.watch('scores');
   useEffect(() => {
     if (watchedScores) {
-      const sum = Object.values(watchedScores).reduce((acc, current) => acc + (current || 0), 0);
+      const sum = Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
       setTotalScore(sum);
     }
   }, [watchedScores]);
-  
 
-  // Form Submission
   async function onSubmit(data: ScoreFormData) {
     if (!activeCriteria) return;
     setIsSubmitting(true);
@@ -117,10 +132,8 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
       const scoreDocRef = doc(firestore, 'scores', team.id);
       const panelField = `panel${juryPanel}`;
 
-      // Set the score for the current panel
       await setDoc(scoreDocRef, { [panelField]: scoreData }, { merge: true });
 
-      // Recalculate average after submission
       const updatedDocSnap = await getDoc(scoreDocRef);
       if (updatedDocSnap.exists()) {
         const docData = updatedDocSnap.data();
@@ -130,7 +143,6 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
         if (docData.panel2) { total += docData.panel2.total; panelCount++; }
         if (docData.panel3) { total += docData.panel3.total; panelCount++; }
         const avgScore = panelCount > 0 ? total / panelCount : 0;
-        // Use non-blocking update for the average score
         setDocumentNonBlocking(scoreDocRef, { avgScore }, { merge: true });
       }
 
@@ -141,12 +153,10 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
 
     } catch (error) {
        console.error('Error submitting score:', error);
-       // Error will be caught by global listener
        setIsSubmitting(false);
     }
   }
   
-  // Show a loading state while criteria are being fetched
   if (criteriaLoading) {
     return (
       <Card>
@@ -157,7 +167,6 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
     );
   }
   
-  // If a score has already been submitted for this team by this panel
   if (isAlreadyScored && !isSubmitting) {
     return (
       <Card>
@@ -183,26 +192,22 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8">
             {activeCriteria && activeCriteria.length > 0 ? (
-              <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 lg:grid-cols-3">
                 {activeCriteria.map((criterion) => (
                   <FormField
                     key={criterion.id}
                     control={form.control}
                     name={`scores.${criterion.id}`}
-                    render={({ field: { value, onChange } }) => (
+                    render={({ field }) => (
                       <FormItem>
-                        <div className="mb-2 flex justify-between items-center">
-                          <FormLabel title={criterion.description}>{criterion.name}</FormLabel>
-                          <span className="font-bold text-lg text-primary">{value}</span>
-                        </div>
+                        <FormLabel title={criterion.description}>{criterion.name}</FormLabel>
                         <FormControl>
-                          <Slider
-                            value={[value]}
-                            onValueChange={(vals) => onChange(vals[0])}
-                            min={1}
-                            max={10}
-                            step={1}
-                            disabled={form.formState.disabled}
+                           <Input
+                            type="number"
+                            min="1"
+                            max="10"
+                            {...field}
+                            className="text-lg font-bold w-24"
                           />
                         </FormControl>
                         <FormMessage />
