@@ -87,7 +87,6 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         defaultValues: defaultValues,
     });
     
-    // If the form has been scored previously, disable it on mount.
     useEffect(() => {
         if (isAlreadyScored) {
             form.control.disable();
@@ -237,3 +236,5 @@ export function ScoreForm(props: ScoreFormProps) {
   
   return <ScoreFormContent {...props} activeCriteria={activeCriteria} />
 }
+
+    
