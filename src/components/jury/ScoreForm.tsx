@@ -33,7 +33,7 @@ const createScoreSchema = (criteria: EvaluationCriterion[]) => {
 
   return z.object({
     scores: z.object(schemaObject),
-    remarks: z.string(),
+    remarks: z.string().optional(),
   });
 };
 
@@ -57,53 +57,46 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
 
     const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
     
-    // Correctly manage isEditing state
+    // isEditing state is now managed only by user interaction.
     const [isEditing, setIsEditing] = useState(() => !existingPanelScore);
-
-    useEffect(() => {
-        setIsEditing(!existingPanelScore);
-    }, [existingPanelScore]);
 
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
-    const defaultValues = useMemo(() => {
-        const initialScore = existingPanelScore || {
-            scores: activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {}),
-            remarks: '',
-        };
-
-        const scoreValues = { ...initialScore.scores };
-        activeCriteria.forEach(c => {
-            if (scoreValues[c.id] === undefined) {
-                scoreValues[c.id] = 5;
-            }
-        });
-
-        return {
-            scores: scoreValues,
-            remarks: initialScore.remarks,
-        };
-    }, [activeCriteria, existingPanelScore]);
-
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
-        defaultValues,
+        defaultValues: useMemo(() => {
+            const initialScore = existingPanelScore || {
+                scores: activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {}),
+                remarks: '',
+            };
+
+            const scoreValues = { ...initialScore.scores };
+            activeCriteria.forEach(c => {
+                if (scoreValues[c.id] === undefined) {
+                    scoreValues[c.id] = 5;
+                }
+            });
+
+            return {
+                scores: scoreValues,
+                remarks: initialScore.remarks,
+            };
+        }, [activeCriteria, existingPanelScore]),
     });
     
-    // Reset the form if the default values change (e.g., Firestore data loads)
+    // Reset the form if the team changes or data loads after initial render
     useEffect(() => {
-        form.reset(defaultValues);
-    }, [form, defaultValues]);
-    
+        form.reset(form.formState.defaultValues);
+        setIsEditing(!existingPanelScore);
+    }, [team.id, existingPanelScore, form]);
+
     const watchedScores = form.watch('scores');
     
     // Calculate total score directly from watched values.
     const totalScore = useMemo(() => {
-        if (!watchedScores) {
-            return Object.values(defaultValues.scores).reduce((acc, current) => acc + (Number(current) || 0), 0);
-        }
+        if (!watchedScores) return 0;
         return Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
-    }, [watchedScores, defaultValues.scores]);
+    }, [watchedScores]);
 
     function onSubmit(data: ScoreFormData) {
         setIsSubmitting(true);
@@ -111,7 +104,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         const scoreDocRef = doc(firestore, 'scores', team.id);
         const panelField = `panel${juryPanel}`;
         const maxScore = activeCriteria.length > 0 ? activeCriteria.length * 10 : 0;
-        const panelScoreData: Score = { ...data, total: totalScore, maxScore };
+        const panelScoreData: Score = { ...data, remarks: data.remarks || '', total: totalScore, maxScore };
 
         const allPanelScores: (Score | undefined)[] = [
             juryPanel === 1 ? panelScoreData : existingScores?.panel1,
@@ -191,7 +184,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                                 <FormItem>
                                     <FormLabel>Remarks</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Provide your detailed feedback here..." {...field} />
+                                        <Textarea placeholder="Provide your detailed feedback here... (Optional)" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
