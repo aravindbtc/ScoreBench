@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -77,24 +76,22 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
   });
 
   useEffect(() => {
-    let defaultValues: ScoreFormData;
     if (activeCriteria) {
-      if (isAlreadyScored && existingPanelScore) {
-        defaultValues = {
-          scores: existingPanelScore.scores,
-          remarks: existingPanelScore.remarks,
-        };
-      } else {
-        const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
-        defaultValues = {
-          scores: defaultScores,
-          remarks: '',
-        };
-      }
-    } else {
-      defaultValues = { scores: {}, remarks: '' };
+        let defaultValues: ScoreFormData;
+        if (isAlreadyScored && existingPanelScore) {
+            defaultValues = {
+            scores: existingPanelScore.scores,
+            remarks: existingPanelScore.remarks,
+            };
+        } else {
+            const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
+            defaultValues = {
+            scores: defaultScores,
+            remarks: '',
+            };
+        }
+        form.reset(defaultValues);
     }
-    form.reset(defaultValues);
   }, [activeCriteria, isAlreadyScored, existingPanelScore, form]);
 
 
