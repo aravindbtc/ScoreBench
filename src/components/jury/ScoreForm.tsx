@@ -54,45 +54,36 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
-
+    
     const existingPanelScore = useMemo(() => existingScores?.[`panel${juryPanel}` as keyof TeamScores] as Score | undefined, [existingScores, juryPanel]);
     
     const [isEditing, setIsEditing] = useState(!existingPanelScore);
 
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
+    const defaultValues = useMemo(() => ({
+        scores: activeCriteria.reduce((acc, c) => ({
+            ...acc,
+            [c.id]: existingPanelScore?.scores?.[c.id] ?? 5
+        }), {}),
+        remarks: existingPanelScore?.remarks ?? '',
+    }), [activeCriteria, existingPanelScore]);
+
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
-        defaultValues: {
-            scores: activeCriteria.reduce((acc, c) => ({
-                ...acc,
-                [c.id]: existingPanelScore?.scores?.[c.id] ?? 5
-            }), {}),
-            remarks: existingPanelScore?.remarks ?? '',
-        },
+        defaultValues,
     });
-
-    // When the existing score data loads, reset the form with the new values.
+    
     useEffect(() => {
-        if (existingPanelScore) {
-             form.reset({
-                scores: activeCriteria.reduce((acc, c) => ({
-                    ...acc,
-                    [c.id]: existingPanelScore?.scores?.[c.id] ?? 5
-                }), {}),
-                remarks: existingPanelScore?.remarks ?? '',
-            });
-            setIsEditing(false);
-        }
-    }, [existingPanelScore, form, activeCriteria]);
+        form.reset(defaultValues);
+        setIsEditing(!existingPanelScore);
+    }, [defaultValues, existingPanelScore, form]);
 
 
     const watchedScores = form.watch('scores');
     
-    const totalScore = useMemo(() => {
-        if (!watchedScores) return 0;
-        return Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
-    }, [watchedScores]);
+    // Calculate total score directly from watched values to ensure real-time updates.
+    const totalScore = Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
 
 
     function onSubmit(data: ScoreFormData) {
@@ -135,7 +126,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                 <CardTitle>Evaluating: {team.teamName}</CardTitle>
                 <CardDescription>Project: {team.projectName}</CardDescription>
             </CardHeader>
-            <Form {...form}>
+            <Form {...form} key={team.id}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                     <CardContent className="space-y-8">
                         {activeCriteria.length > 0 ? (
