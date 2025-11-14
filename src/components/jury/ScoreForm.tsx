@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -23,8 +24,17 @@ import { Wand2, Loader2 } from 'lucide-react';
 import { doc, getDoc, setDoc, collection, query, where } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 
-// Schema is now generated dynamically
+// This function creates the validation schema dynamically based on the active criteria.
 const createScoreSchema = (criteria: EvaluationCriterion[]) => {
+  if (criteria.length === 0) {
+    // If there are no criteria, the schema only requires remarks.
+    return z.object({
+      scores: z.object({}),
+      remarks: z.string().min(10, 'Please provide some detailed remarks.'),
+      aiFeedback: z.string().optional(),
+    });
+  }
+
   const schemaObject = criteria.reduce((acc, criterion) => {
     acc[criterion.id] = z.number().min(1).max(10);
     return acc;
@@ -52,35 +62,49 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
 
+  // Fetch only the active evaluation criteria
   const criteriaQuery = useMemoFirebase(() => query(collection(firestore, 'evaluationCriteria'), where('active', '==', true)), [firestore]);
   const { data: activeCriteria, isLoading: criteriaLoading } = useCollection<EvaluationCriterion>(criteriaQuery);
   
+  // Memoize the schema creation to avoid re-creating it on every render
   const scoreSchema = useMemo(() => {
-    return activeCriteria ? createScoreSchema(activeCriteria) : null;
+    return activeCriteria ? createScoreSchema(activeCriteria) : createScoreSchema([]);
   }, [activeCriteria]);
 
-  const isAlreadyScored = !!existingScores?.[`panel${juryPanel}` as keyof TeamScores];
+  // Check if this panel has already submitted a score for this team
+  const existingPanelScore = existingScores?.[`panel${juryPanel}` as keyof TeamScores];
+  const isAlreadyScored = !!existingPanelScore;
 
+  // Initialize the form
   const form = useForm<ScoreFormData>({
-    resolver: scoreSchema ? zodResolver(scoreSchema) : undefined,
+    resolver: zodResolver(scoreSchema),
     disabled: isAlreadyScored || isSubmitting,
   });
-  
+
+  // Effect to reset form values when criteria or team changes
   useEffect(() => {
-    if (activeCriteria && scoreSchema) {
-      form.reset({
-        scores: activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {}),
-        remarks: '',
-        aiFeedback: '',
-      });
-      // @ts-ignore
-      form.resolver = zodResolver(scoreSchema);
+    if (activeCriteria) {
+      // If a score already exists, populate the form with those values
+      if (isAlreadyScored && existingPanelScore) {
+          form.reset({
+              scores: existingPanelScore.scores,
+              remarks: existingPanelScore.remarks,
+              aiFeedback: existingPanelScore.aiFeedback || '',
+          });
+      } else {
+        // Otherwise, set default values
+        const defaultScores = activeCriteria.reduce((acc, c) => ({ ...acc, [c.id]: 5 }), {});
+        form.reset({
+          scores: defaultScores,
+          remarks: '',
+          aiFeedback: '',
+        });
+      }
     }
-  }, [activeCriteria, scoreSchema, form]);
+  }, [activeCriteria, team, form, isAlreadyScored, existingPanelScore]);
 
-
+  // Watch for changes in score values to calculate the total
   const watchedScores = form.watch('scores');
-
   useEffect(() => {
     if (watchedScores) {
       const sum = Object.values(watchedScores).reduce((acc, current) => acc + (current || 0), 0);
@@ -88,14 +112,16 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
     }
   }, [watchedScores]);
   
+  // AI Feedback Generation
   const handleGenerateFeedback = async () => {
+    if (!activeCriteria) return;
     setIsGenerating(true);
     try {
       const { scores } = form.getValues();
-      const input = activeCriteria?.reduce((acc, criterion) => {
+      const input = activeCriteria.reduce((acc, criterion) => {
         acc[criterion.name] = scores[criterion.id];
         return acc;
-      }, {} as Record<string, number>) || {};
+      }, {} as Record<string, number>);
 
       const result = await generateTeamFeedback(input);
       if (result?.feedback) {
@@ -117,6 +143,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
     }
   };
 
+  // Form Submission
   async function onSubmit(data: ScoreFormData) {
     if (!activeCriteria) return;
     setIsSubmitting(true);
@@ -126,9 +153,10 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
       const scoreDocRef = doc(firestore, 'scores', team.id);
       const panelField = `panel${juryPanel}`;
 
+      // Set the score for the current panel
       await setDoc(scoreDocRef, { [panelField]: scoreData }, { merge: true });
 
-      // Recalculate average
+      // Recalculate average after submission
       const updatedDocSnap = await getDoc(scoreDocRef);
       if (updatedDocSnap.exists()) {
         const docData = updatedDocSnap.data();
@@ -138,6 +166,7 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
         if (docData.panel2) { total += docData.panel2.total; panelCount++; }
         if (docData.panel3) { total += docData.panel3.total; panelCount++; }
         const avgScore = panelCount > 0 ? total / panelCount : 0;
+        // Use non-blocking update for the average score
         setDocumentNonBlocking(scoreDocRef, { avgScore }, { merge: true });
       }
 
@@ -145,22 +174,27 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
         title: 'Success!',
         description: `Score submitted for ${team.teamName}.`,
       });
-      // After submission, the form should become disabled.
-      form.reset(form.getValues()); // Keep the values
-      setIsSubmitting(false); // To let the disabled state be controlled by `isAlreadyScored` logic which will be true on next render
 
     } catch (error) {
        console.error('Error submitting score:', error);
-       // This will be handled by the global error handler
+       // Error will be caught by global listener
        setIsSubmitting(false);
     }
   }
   
-  if (criteriaLoading || !activeCriteria) {
-    return <Card><CardContent><Loader2 className="m-auto my-8 h-8 w-8 animate-spin text-primary" /></CardContent></Card>
+  // Show a loading state while criteria are being fetched
+  if (criteriaLoading) {
+    return (
+      <Card>
+        <CardContent className="flex justify-center items-center h-64">
+          <Loader2 className="m-auto my-8 h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
   }
   
-  if (isAlreadyScored) {
+  // If a score has already been submitted for this team by this panel
+  if (isAlreadyScored && !isSubmitting) {
     return (
       <Card>
         <CardHeader>
@@ -184,34 +218,40 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8">
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-              {activeCriteria && activeCriteria.map((criterion) => (
-                <FormField
-                  key={criterion.id}
-                  control={form.control}
-                  name={`scores.${criterion.id}` as any}
-                  render={({ field: { value, onChange } }) => (
-                    <FormItem>
-                      <div className="mb-2 flex justify-between items-center">
-                        <FormLabel title={criterion.description}>{criterion.name}</FormLabel>
-                        <span className="font-bold text-lg text-primary">{value}</span>
-                      </div>
-                      <FormControl>
-                        <Slider
-                          value={[value]}
-                          onValueChange={(vals) => onChange(vals[0])}
-                          min={1}
-                          max={10}
-                          step={1}
-                          disabled={form.formState.disabled}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
-            </div>
+            {activeCriteria && activeCriteria.length > 0 ? (
+              <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                {activeCriteria.map((criterion) => (
+                  <FormField
+                    key={criterion.id}
+                    control={form.control}
+                    name={`scores.${criterion.id}`}
+                    render={({ field: { value, onChange } }) => (
+                      <FormItem>
+                        <div className="mb-2 flex justify-between items-center">
+                          <FormLabel title={criterion.description}>{criterion.name}</FormLabel>
+                          <span className="font-bold text-lg text-primary">{value}</span>
+                        </div>
+                        <FormControl>
+                          <Slider
+                            value={[value]}
+                            onValueChange={(vals) => onChange(vals[0])}
+                            min={1}
+                            max={10}
+                            step={1}
+                            disabled={form.formState.disabled}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                  No active evaluation criteria have been set by the admin.
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -250,13 +290,13 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
             </div>
 
           </CardContent>
-          <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-b-lg border-t bg-card-foreground/5 p-4">
+          <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-b-lg border-t bg-muted/10 p-4">
              <div className="text-2xl font-bold">
               Total Score: <span className="text-primary">{totalScore} / {activeCriteria ? activeCriteria.length * 10 : 0}</span>
             </div>
             <Button type="submit" size="lg" disabled={form.formState.disabled || !form.formState.isValid}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit Score
+              {isSubmitting ? 'Submitting...' : 'Submit Score'}
             </Button>
           </CardFooter>
         </form>
@@ -264,3 +304,5 @@ export function ScoreForm({ team, juryPanel, existingScores }: ScoreFormProps) {
     </Card>
   );
 }
+
+    
