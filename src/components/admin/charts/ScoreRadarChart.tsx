@@ -38,6 +38,29 @@ const chartConfig = {
     },
 };
 
+// Custom tick component to wrap long labels
+const CustomAngleTick = ({ x, y, payload }: any) => {
+    const { value } = payload;
+    const words = value.split(' ');
+    const maxWordsPerLine = 2;
+    const lines = [];
+
+    for (let i = 0; i < words.length; i += maxWordsPerLine) {
+        lines.push(words.slice(i, i + maxWordsPerLine).join(' '));
+    }
+
+    return (
+        <g transform={`translate(${x},${y})`}>
+            <text textAnchor="middle" dominantBaseline="central" className="text-xs fill-muted-foreground">
+                {lines.map((line, index) => (
+                    <tspan key={index} x={0} dy={index === 0 ? 0 : '1.2em'}>{line}</tspan>
+                ))}
+            </text>
+        </g>
+    );
+};
+
+
 export function ScoreRadarChart({ scores, criteria: allCriteria }: ScoreRadarChartProps) {
 
   const { chartData, hasData } = useMemo(() => {
@@ -72,9 +95,9 @@ export function ScoreRadarChart({ scores, criteria: allCriteria }: ScoreRadarCha
           config={chartConfig}
           className="mx-auto aspect-square h-full max-h-[350px]"
         >
-          <RadarChart data={chartData}>
+          <RadarChart data={chartData} margin={{ top: 20, right: 40, bottom: 20, left: 40 }}>
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-            <PolarAngleAxis dataKey="criterion" />
+            <PolarAngleAxis dataKey="criterion" tick={<CustomAngleTick />} />
             <PolarRadiusAxis angle={90} domain={[0, 10]} tick={false} axisLine={false} />
             <PolarGrid />
             {scores.panel1 && <Radar name="Panel 1" dataKey="panel1" fill="var(--color-panel1)" fillOpacity={0.6} />}
