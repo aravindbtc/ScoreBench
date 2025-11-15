@@ -41,10 +41,14 @@ export default function LoginPage() {
               <TabsTrigger value="admin">Admin</TabsTrigger>
             </TabsList>
             <TabsContent value="jury" className="mt-6">
-              <JuryLogin />
+              <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+                <JuryLogin />
+              </Suspense>
             </TabsContent>
             <TabsContent value="admin" className="mt-6">
-              <AdminLogin />
+               <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+                <AdminLogin />
+              </Suspense>
             </TabsContent>
           </Tabs>
         </CardContent>
