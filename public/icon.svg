@@ -1,6 +1,5 @@
-<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <rect width="100" height="100" rx="20" fill="hsl(221.2 83.2% 53.3%)"/>
-    <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-family="Arial, sans-serif" font-size="50" font-weight="bold" fill="hsl(210 40% 98%)">
-        SB
-    </text>
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="100" height="100" rx="24" fill="#22C55E"/>
+<path d="M68.5 28C61.3333 28 51.5 31.6 51.5 40.5V47.5H43C39.6863 47.5 37 50.1863 37 53.5V69.5C37 72.8137 39.6863 75.5 43 75.5H53M68.5 28C72.3838 28 75.5 31.1162 75.5 35C75.5 38.8838 72.3838 42 68.5 42H51.5V28H68.5Z" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M49 56.5H62.5C65.8137 56.5 68.5 59.1863 68.5 62.5C68.5 65.8137 65.8137 68.5 62.5 68.5H49V56.5Z" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
