@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { JuryLogin } from '@/components/auth/JuryLogin';
@@ -20,6 +20,14 @@ function getLoginBackgroundUrl() {
 
 export default function LoginPage() {
   const backgroundImageUrl = getLoginBackgroundUrl();
+  const [isClient, setIsClient] = useState(false);
+
+  // This effect runs only on the client, after the component has mounted.
+  // It ensures the Tabs component, which causes hydration issues, is not rendered on the server.
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
@@ -37,22 +45,26 @@ export default function LoginPage() {
           <p className="text-muted-foreground">Select your role to proceed</p>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="jury" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="jury">Jury</TabsTrigger>
-              <TabsTrigger value="admin">Admin</TabsTrigger>
-            </TabsList>
-            <TabsContent value="jury" className="mt-6">
-              <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-                <JuryLogin />
-              </Suspense>
-            </TabsContent>
-            <TabsContent value="admin" className="mt-6">
-               <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-                <AdminLogin />
-              </Suspense>
-            </TabsContent>
-          </Tabs>
+          {isClient ? (
+            <Tabs defaultValue="jury" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="jury">Jury</TabsTrigger>
+                <TabsTrigger value="admin">Admin</TabsTrigger>
+              </TabsList>
+              <TabsContent value="jury" className="mt-6">
+                <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+                  <JuryLogin />
+                </Suspense>
+              </TabsContent>
+              <TabsContent value="admin" className="mt-6">
+                 <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+                  <AdminLogin />
+                </Suspense>
+              </TabsContent>
+            </Tabs>
+          ) : (
+             <Skeleton className="h-64 w-full" />
+          )}
         </CardContent>
       </Card>
     </main>
