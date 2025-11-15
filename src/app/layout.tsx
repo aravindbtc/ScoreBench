@@ -7,7 +7,6 @@ export const metadata: Metadata = {
   description: 'A modern, real-time evaluation system for competitions.',
   icons: {
     icon: '/favicon.ico',
-    shortcut: '/favicon.png',
     apple: '/apple-touch-icon.png',
   },
 };
