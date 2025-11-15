@@ -9,7 +9,7 @@ import { LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeToggle } from './ThemeToggle';
 
-export function AppHeader({ userRole }: { userRole: 'Jury' | 'Admin' }) {
+export function AppHeader({ userRole, children }: { userRole: 'Jury' | 'Admin', children?: React.ReactNode }) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -31,8 +31,11 @@ export function AppHeader({ userRole }: { userRole: 'Jury' | 'Admin' }) {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
-      <div className="container flex h-16 items-center justify-between">
-        <AppLogo />
+      <div className="container flex h-16 items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          {children}
+          <AppLogo />
+        </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <Button variant="outline" size="sm" onClick={handleLogout}>
