@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Menu, Trophy } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { AppLogo } from '../layout/AppLogo';
 
 export function AdminMobileNav({ children }: { children: React.ReactNode }) {
@@ -27,9 +30,14 @@ export function AdminMobileNav({ children }: { children: React.ReactNode }) {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="p-0">
-        <div className="p-4 border-b">
-           <AppLogo />
-        </div>
+        <SheetHeader className="p-4 border-b">
+          <SheetTitle>
+            <AppLogo />
+          </SheetTitle>
+          <SheetDescription className="sr-only">
+             Admin navigation menu.
+          </SheetDescription>
+        </SheetHeader>
         <nav className="flex flex-col space-y-2 p-4" onClick={() => setIsOpen(false)}>
             {children}
         </nav>
