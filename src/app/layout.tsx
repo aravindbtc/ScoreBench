@@ -6,8 +6,9 @@ export const metadata: Metadata = {
   title: 'ScoreBench - Jury Evaluation System',
   description: 'A modern, real-time evaluation system for competitions.',
   icons: {
-    icon: '/icon.png',
+    icon: '/favicon.ico',
     apple: '/apple-touch-icon.png',
+    shortcut: '/favicon.png',
   },
 };
 
