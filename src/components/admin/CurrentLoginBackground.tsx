@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Image from "next/image";
 import { Skeleton } from '../ui/skeleton';
-import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { Copy } from 'lucide-react';
@@ -77,8 +77,14 @@ export function CurrentLoginBackground() {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="current-image-url">Image URL</Label>
-                <div className="flex items-center gap-2">
-                    <Input id="current-image-url" readOnly value={imageUrl} className="text-xs" />
+                <div className="flex items-start gap-2">
+                    <Textarea 
+                      id="current-image-url" 
+                      readOnly 
+                      value={imageUrl} 
+                      className="text-xs h-24" 
+                      rows={3}
+                    />
                     <Button variant="outline" size="icon" onClick={handleCopy} aria-label="Copy URL">
                         <Copy className="h-4 w-4" />
                     </Button>
