@@ -110,12 +110,17 @@
         "active": {
           "type": "boolean",
           "description": "Whether this criterion is currently active for scoring."
+        },
+        "maxScore": {
+            "type": "number",
+            "description": "The maximum possible score for this criterion."
         }
       },
       "required": [
         "name",
         "description",
-        "active"
+        "active",
+        "maxScore"
       ]
     }
   },

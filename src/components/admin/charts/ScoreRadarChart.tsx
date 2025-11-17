@@ -63,13 +63,15 @@ const CustomAngleTick = ({ x, y, payload }: any) => {
 
 export function ScoreRadarChart({ scores, criteria: allCriteria }: ScoreRadarChartProps) {
 
-  const { chartData, hasData } = useMemo(() => {
-    // We only want to show criteria that are currently active and have been scored by at least one panel
+  const { chartData, hasData, maxDomain } = useMemo(() => {
     const activeScoredCriteria = allCriteria.filter(c => 
-      c.active && (scores.panel1?.scores[c.id] || scores.panel2?.scores[c.id] || scores.panel3?.scores[c.id])
+      c.active && (scores.panel1?.scores[c.id] != null || scores.panel2?.scores[c.id] != null || scores.panel3?.scores[c.id] != null)
     );
     
+    let maxScore = 10;
+    
     const data = activeScoredCriteria.map(criterion => {
+      if (criterion.maxScore > maxScore) maxScore = criterion.maxScore;
       let dataPoint: {[key: string]: string | number} = { criterion: criterion.name };
       dataPoint.panel1 = scores.panel1?.scores[criterion.id] ?? 0;
       dataPoint.panel2 = scores.panel2?.scores[criterion.id] ?? 0;
@@ -77,7 +79,7 @@ export function ScoreRadarChart({ scores, criteria: allCriteria }: ScoreRadarCha
       return dataPoint;
     });
 
-    return { chartData: data, hasData: data.length > 0 };
+    return { chartData: data, hasData: data.length > 0, maxDomain: Math.max(maxScore, 10) };
   }, [scores, allCriteria]);
 
 
@@ -98,7 +100,7 @@ export function ScoreRadarChart({ scores, criteria: allCriteria }: ScoreRadarCha
           <RadarChart data={chartData} margin={{ top: 20, right: 40, bottom: 20, left: 40 }}>
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
             <PolarAngleAxis dataKey="criterion" tick={<CustomAngleTick />} />
-            <PolarRadiusAxis angle={90} domain={[0, 10]} tick={false} axisLine={false} />
+            <PolarRadiusAxis angle={90} domain={[0, maxDomain]} tick={false} axisLine={false} />
             <PolarGrid />
             {scores.panel1 && <Radar name="Panel 1" dataKey="panel1" fill="var(--color-panel1)" fillOpacity={0.6} />}
             {scores.panel2 && <Radar name="Panel 2" dataKey="panel2" fill="var(--color-panel2)" fillOpacity={0.6} />}

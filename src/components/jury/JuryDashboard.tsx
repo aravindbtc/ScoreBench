@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -25,6 +26,11 @@ export function JuryDashboard() {
 
   const teamsQuery = useMemoFirebase(() => collection(firestore, 'teams'), [firestore]);
   const { data: teams, isLoading: teamsLoading } = useCollection<Team>(teamsQuery);
+
+  const sortedTeams = useMemo(() => {
+    if (!teams) return [];
+    return [...teams].sort((a, b) => a.teamName.localeCompare(b.teamName));
+  }, [teams]);
 
   const scoresQuery = useMemoFirebase(() => collection(firestore, 'scores'), [firestore]);
   const { data: scores, isLoading: scoresLoading } = useCollection<TeamScores>(scoresQuery);
@@ -76,8 +82,8 @@ export function JuryDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {teams && teams.length > 0 ? (
-                teams.map((team) => {
+              {sortedTeams && sortedTeams.length > 0 ? (
+                sortedTeams.map((team) => {
                   const status = getTeamStatus(team.id);
                   return (
                     <TableRow key={team.id}>

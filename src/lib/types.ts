@@ -18,6 +18,7 @@ export interface Score {
   total: number;
   remarks: string;
   aiFeedback?: string;
+  maxScore: number;
 }
 
 export interface TeamScores {
@@ -45,4 +46,5 @@ export interface EvaluationCriterion {
   name: string;
   description: string;
   active: boolean;
+  maxScore: number;
 }

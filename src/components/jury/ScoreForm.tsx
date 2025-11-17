@@ -27,8 +27,8 @@ import { Input } from '../ui/input';
 const createScoreSchema = (criteria: EvaluationCriterion[]) => {
   const schemaObject = criteria.reduce((acc, criterion) => {
     acc[criterion.id] = z.coerce.number()
-        .min(1, { message: "Must be at least 1." })
-        .max(10, { message: "Must be 10 or less." });
+        .min(0, { message: "Must be 0 or more." })
+        .max(criterion.maxScore, { message: `Must be ${criterion.maxScore} or less.` });
     return acc;
   }, {} as Record<string, z.ZodTypeAny>);
 
@@ -65,7 +65,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
     const defaultValues = useMemo(() => ({
         scores: activeCriteria.reduce((acc, c) => ({
             ...acc,
-            [c.id]: existingPanelScore?.scores?.[c.id] ?? 5
+            [c.id]: existingPanelScore?.scores?.[c.id] ?? Math.round(c.maxScore / 2)
         }), {}),
         remarks: existingPanelScore?.remarks ?? '',
     }), [activeCriteria, existingPanelScore]);
@@ -73,6 +73,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
         defaultValues,
+        mode: 'onChange' // Validate on change to enable/disable button
     });
     
     useEffect(() => {
@@ -83,8 +84,8 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
 
     const watchedScores = form.watch('scores');
     
-    // Calculate total score directly from watched values to ensure real-time updates.
     const totalScore = Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
+    const maxScorePossible = activeCriteria.reduce((acc, c) => acc + c.maxScore, 0);
 
 
     function onSubmit(data: ScoreFormData) {
@@ -92,8 +93,8 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         
         const scoreDocRef = doc(firestore, 'scores', team.id);
         const panelField = `panel${juryPanel}`;
-        const maxScore = activeCriteria.length > 0 ? activeCriteria.length * 10 : 0;
-        const panelScoreData: Score = { ...data, remarks: data.remarks || '', total: totalScore, maxScore };
+
+        const panelScoreData: Score = { ...data, remarks: data.remarks || '', total: totalScore, maxScore: maxScorePossible };
 
         const allPanelScores: (Score | undefined)[] = [
             juryPanel === 1 ? panelScoreData : existingScores?.panel1,
@@ -102,8 +103,11 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         ];
 
         const validScores = allPanelScores.filter((s): s is Score => s !== undefined && s.total !== undefined);
-        const total = validScores.reduce((acc, s) => acc + s.total, 0);
-        const avgScore = validScores.length > 0 ? total / validScores.length : 0;
+        
+        // Calculate average based on a normalized score out of 100
+        const avgScore = validScores.length > 0 
+            ? validScores.reduce((acc, s) => acc + (s.total / (s.maxScore || 1)) * 100, 0) / validScores.length
+            : 0;
         
         const finalData = {
             [panelField]: panelScoreData,
@@ -145,13 +149,13 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                                                     <div className="flex items-center gap-2 pt-2">
                                                         <Input
                                                             type="number"
-                                                            min="1"
-                                                            max="10"
+                                                            min="0"
+                                                            max={criterion.maxScore}
                                                             {...field}
                                                             disabled={!isEditing}
                                                             className="text-lg font-bold w-24"
                                                         />
-                                                        <span className="text-muted-foreground">/ 10</span>
+                                                        <span className="text-muted-foreground">/ {criterion.maxScore}</span>
                                                     </div>
                                                 </FormControl>
                                                 <FormMessage />
@@ -182,7 +186,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
                     </CardContent>
                     <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-b-lg border-t bg-muted/20 p-4">
                         <div className="text-2xl font-bold">
-                            Total Score: <span className="text-primary">{totalScore} / {activeCriteria.length * 10}</span>
+                            Total Score: <span className="text-primary">{totalScore} / {maxScorePossible}</span>
                         </div>
                         {!isEditing ? (
                              <div className="flex items-center gap-4">
