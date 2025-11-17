@@ -95,3 +95,4 @@ export const defaultCriteria: EvaluationCriterion[] = [
         "maxScore": 10
     }
   ];
+
