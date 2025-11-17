@@ -104,7 +104,6 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
 
         const validScores = allPanelScores.filter((s): s is Score => s !== undefined && s.total !== undefined);
         
-        // Calculate average based on a normalized score out of 100
         const avgScore = validScores.length > 0 
             ? validScores.reduce((acc, s) => acc + (s.total / (s.maxScore || 1)) * 100, 0) / validScores.length
             : 0;

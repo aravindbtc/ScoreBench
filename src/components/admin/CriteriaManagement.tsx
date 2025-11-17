@@ -14,7 +14,7 @@ import type { EvaluationCriterion } from '@/lib/types';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Switch } from '@/components/ui/switch';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { doc, writeBatch } from 'firebase/firestore';
+import { doc, collection, writeBatch, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '../ui/button';
 import { Loader2, Edit } from 'lucide-react';
@@ -111,7 +111,8 @@ export function CriteriaManagement({ criteria: initialCriteria }: CriteriaManage
     try {
         const batch = writeBatch(firestore);
         
-        const currentCriteriaSnapshot = await firestore.collection('evaluationCriteria').get();
+        const criteriaCollection = collection(firestore, 'evaluationCriteria');
+        const currentCriteriaSnapshot = await getDocs(criteriaCollection);
         currentCriteriaSnapshot.docs.forEach(doc => {
             batch.delete(doc.ref);
         });
@@ -139,7 +140,7 @@ export function CriteriaManagement({ criteria: initialCriteria }: CriteriaManage
     }
   };
 
-  const criteria = initialCriteria.length > 0 ? initialCriteria : defaultCriteria;
+  const criteria = initialCriteria.length > 0 ? initialCriteria : [];
 
   return (
     <Card>

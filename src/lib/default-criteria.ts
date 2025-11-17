@@ -60,14 +60,14 @@ export const defaultCriteria: EvaluationCriterion[] = [
       "maxScore": 10
     },
     {
-        "id": "problem",
+        "id": "problem_definition",
         "name": "Problem Definition",
         "description": "How well is the problem defined and articulated by the team?",
         "active": true,
         "maxScore": 10
     },
     {
-        "id": "correctness",
+        "id": "solution_correctness",
         "name": "Solution Correctness",
         "description": "Does the solution correctly and effectively solve the defined problem?",
         "active": true,
