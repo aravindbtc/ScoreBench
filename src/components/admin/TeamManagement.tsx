@@ -39,6 +39,8 @@ export function TeamManagement({ teams, onDeleteRequest, labels }: TeamManagemen
     }
   };
 
+  const sortedTeams = [...teams].sort((a, b) => a.teamName.localeCompare(b.teamName));
+
   if (teams.length === 0) {
     return (
       <Card className="text-center p-8">
@@ -60,14 +62,16 @@ export function TeamManagement({ teams, onDeleteRequest, labels }: TeamManagemen
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[60px]">S.No.</TableHead>
               <TableHead>{labels.teamLabel}</TableHead>
               <TableHead>{labels.projectLabel}</TableHead>
               <TableHead className="text-right w-[120px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {teams.map((team) => (
+            {sortedTeams.map((team, index) => (
               <TableRow key={team.id}>
+                <TableCell>{index + 1}</TableCell>
                 <TableCell className="font-medium">{team.teamName}</TableCell>
                 <TableCell>{team.projectName}</TableCell>
                 <TableCell className="text-right">

@@ -84,6 +84,7 @@ export function JuryDashboard() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[60px]">S.No.</TableHead>
                 <TableHead>{labels.teamLabel}</TableHead>
                 <TableHead>{labels.projectLabel}</TableHead>
                 <TableHead>Status</TableHead>
@@ -92,10 +93,11 @@ export function JuryDashboard() {
             </TableHeader>
             <TableBody>
               {sortedTeams && sortedTeams.length > 0 ? (
-                sortedTeams.map((team) => {
+                sortedTeams.map((team, index) => {
                   const status = getTeamStatus(team.id);
                   return (
                     <TableRow key={team.id}>
+                      <TableCell>{index + 1}</TableCell>
                       <TableCell className="font-medium">{team.teamName}</TableCell>
                       <TableCell>{team.projectName}</TableCell>
                       <TableCell>
@@ -118,7 +120,7 @@ export function JuryDashboard() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center h-24">
+                  <TableCell colSpan={5} className="text-center h-24">
                     No teams have been added yet.
                   </TableCell>
                 </TableRow>
