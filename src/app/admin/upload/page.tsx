@@ -1,6 +1,8 @@
 
 import { TeamUploadForm } from "@/components/admin/TeamUploadForm";
+import { TeamJsonPasteForm } from "@/components/admin/TeamJsonPasteForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function UploadTeamsPage() {
   const exampleJson = `
@@ -24,18 +26,29 @@ export default function UploadTeamsPage() {
           <CardHeader>
             <CardTitle>Upload Team Data</CardTitle>
             <CardDescription>
-              Upload a JSON file containing an array of teams. Each object should have a `teamName` and `projectName`.
+              Choose your preferred method: upload a JSON file or paste the JSON content directly.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TeamUploadForm />
+            <Tabs defaultValue="paste" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="paste">Paste JSON</TabsTrigger>
+                <TabsTrigger value="upload">Upload File</TabsTrigger>
+              </TabsList>
+              <TabsContent value="paste" className="mt-6">
+                <TeamJsonPasteForm />
+              </TabsContent>
+              <TabsContent value="upload" className="mt-6">
+                <TeamUploadForm />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
         <Card>
            <CardHeader>
             <CardTitle>Example JSON Format</CardTitle>
             <CardDescription>
-              Your JSON file should contain an array of objects. The app can also intelligently parse keys like 'team_name' or 'project_title'.
+              Your JSON file or pasted text should contain an array of objects. The app can also intelligently parse keys like 'team_name' or 'project_title'.
             </CardDescription>
           </CardHeader>
           <CardContent>
