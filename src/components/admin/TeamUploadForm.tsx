@@ -21,9 +21,10 @@ const fileSchema = z.object({
     .refine((files) => files?.[0]?.type === 'application/json', 'Must be a JSON file.'),
 });
 
+// Allow projectName to be an empty string by removing .min(1)
 const teamSchema = z.object({
   teamName: z.string().min(1, 'teamName is required.'),
-  projectName: z.string().min(1, 'projectName is required.'),
+  projectName: z.string(), // Removed .min(1) to allow empty strings
 });
 
 const teamsArraySchema = z.array(teamSchema);
@@ -62,7 +63,7 @@ export function TeamUploadForm() {
         // Pre-process the array to map different possible key names to our schema.
         const mappedTeams = teamsToParse.map((team: any) => ({
             teamName: team.teamName || team.team_name,
-            projectName: team.projectName || team.project_title || team.projectTitle
+            projectName: team.projectName || team.project_title || team.projectTitle || ''
         }));
         
         const parsedTeams = teamsArraySchema.parse(mappedTeams);
@@ -95,7 +96,7 @@ export function TeamUploadForm() {
         console.error('Error uploading teams:', error);
         let errorMessage = 'An unknown error occurred.';
         if (error instanceof z.ZodError) {
-          errorMessage = 'The data does not match the required format. Each team must have a teamName/team_name and projectName/project_title.';
+          errorMessage = 'The data does not match the required format. Each team must have a `teamName`.';
         } else if (error instanceof Error) {
           errorMessage = error.message;
         }
