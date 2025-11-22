@@ -2,11 +2,11 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { collection } from 'firebase/firestore';
-import type { Team, TeamScores } from '@/lib/types';
+import { collection, doc } from 'firebase/firestore';
+import type { Team, TeamScores, AppLabels } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,15 @@ export function JuryDashboard() {
       setJuryPanel(parseInt(panel, 10));
     }
   }, []);
+
+  const labelsDocRef = useMemoFirebase(() => doc(firestore, 'appConfig', 'labels'), [firestore]);
+  const { data: labelsData, isLoading: labelsLoading } = useDoc<AppLabels>(labelsDocRef);
+
+  const labels = useMemo(() => ({
+    teamLabel: labelsData?.teamLabel || 'Team Name',
+    projectLabel: labelsData?.projectLabel || 'Project Name',
+  }), [labelsData]);
+
 
   const teamsQuery = useMemoFirebase(() => collection(firestore, 'teams'), [firestore]);
   const { data: teams, isLoading: teamsLoading } = useCollection<Team>(teamsQuery);
@@ -44,7 +53,7 @@ export function JuryDashboard() {
     return 'pending';
   };
 
-  const isLoading = teamsLoading || scoresLoading || !juryPanel;
+  const isLoading = teamsLoading || scoresLoading || !juryPanel || labelsLoading;
 
   if (isLoading) {
     return (
@@ -75,8 +84,8 @@ export function JuryDashboard() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Team Name</TableHead>
-                <TableHead>Project Name</TableHead>
+                <TableHead>{labels.teamLabel}</TableHead>
+                <TableHead>{labels.projectLabel}</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>

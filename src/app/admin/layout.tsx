@@ -2,7 +2,7 @@
 import { AdminAuth } from '@/components/auth/AdminAuth';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { NavLink } from '@/components/layout/NavLink';
-import { BarChart, Image, Upload, ListChecks } from 'lucide-react';
+import { BarChart, Image, Upload, ListChecks, Settings } from 'lucide-react';
 import { AdminMobileNav } from '@/components/admin/AdminMobileNav';
 
 export default function AdminLayout({
@@ -27,6 +27,10 @@ export default function AdminLayout({
         <NavLink href="/admin/upload-image">
             <Image className="mr-2 h-4 w-4" />
             Customize Login
+        </NavLink>
+        <NavLink href="/admin/settings">
+            <Settings className="mr-2 h-4 w-4" />
+            App Settings
         </NavLink>
     </>
   );

@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
-import type { Team, TeamScores, CombinedScoreData, Jury, EvaluationCriterion } from '@/lib/types';
+import type { Team, TeamScores, CombinedScoreData, Jury, EvaluationCriterion, AppLabels } from '@/lib/types';
 import { ScoreTable } from './ScoreTable';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2, PlusCircle, UserPlus, ListChecks } from 'lucide-react';
@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamManagement } from './TeamManagement';
 import { JuryManagement } from './JuryManagement';
 import { AddJuryDialog } from './AddJuryDialog';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { TopTeamsBarChart } from './charts/TopTeamsBarChart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { CriteriaManagement } from './CriteriaManagement';
@@ -37,6 +37,15 @@ export function AdminDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+
+  const labelsDocRef = useMemoFirebase(() => doc(firestore, 'appConfig', 'labels'), [firestore]);
+  const { data: labelsData, isLoading: labelsLoading } = useDoc<AppLabels>(labelsDocRef);
+
+  const labels = useMemo(() => ({
+    teamLabel: labelsData?.teamLabel || 'Team Name',
+    projectLabel: labelsData?.projectLabel || 'Project Name',
+  }), [labelsData]);
+
 
   const teamsQuery = useMemoFirebase(() => collection(firestore, 'teams'), [firestore]);
   const { data: teams, isLoading: teamsLoading } = useCollection<Team>(teamsQuery);
@@ -68,8 +77,8 @@ export function AdminDashboard() {
     
     const dataForExport = combinedData.map(item => {
       const row: {[key: string]: any} = {
-        'Team Name': item.teamName,
-        'Project Name': item.projectName,
+        [labels.teamLabel]: item.teamName,
+        [labels.projectLabel]: item.projectName,
         'Average Score': item.scores.avgScore ? item.scores.avgScore.toFixed(2) : 'N/A',
       };
       
@@ -127,7 +136,7 @@ export function AdminDashboard() {
     }
   };
 
-  const isLoading = teamsLoading || scoresLoading || juriesLoading || criteriaLoading;
+  const isLoading = teamsLoading || scoresLoading || juriesLoading || criteriaLoading || labelsLoading;
 
   return (
     <div className="space-y-4">
@@ -170,7 +179,7 @@ export function AdminDashboard() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <ScoreTable data={combinedData} onDeleteRequest={(team) => setItemToDelete({type: 'team', data: team})} criteria={criteria || []}/>
+            <ScoreTable data={combinedData} onDeleteRequest={(team) => setItemToDelete({type: 'team', data: team})} criteria={criteria || []} labels={labels}/>
           )}
         </TabsContent>
         <TabsContent value="teams" className="mt-4">
@@ -186,7 +195,7 @@ export function AdminDashboard() {
                   Add Team
                 </Button>
               </div>
-              <TeamManagement teams={teams || []} onDeleteRequest={(team) => setItemToDelete({type: 'team', data: team as CombinedScoreData})} />
+              <TeamManagement teams={teams || []} onDeleteRequest={(team) => setItemToDelete({type: 'team', data: team as CombinedScoreData})} labels={labels}/>
             </>
           )}
         </TabsContent>
@@ -209,7 +218,7 @@ export function AdminDashboard() {
         </TabsContent>
       </Tabs>
       
-      <AddTeamDialog isOpen={isAddTeamOpen} onOpenChange={setIsAddTeamOpen} />
+      <AddTeamDialog isOpen={isAddTeamOpen} onOpenChange={setIsAddTeamOpen} labels={labels}/>
       <AddJuryDialog isOpen={isAddJuryOpen} onOpenChange={setIsAddJuryOpen} />
 
       <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>

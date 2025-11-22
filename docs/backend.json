@@ -122,6 +122,26 @@
         "active",
         "maxScore"
       ]
+    },
+    "AppLabels": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AppLabels",
+      "description": "Customizable labels for the application UI.",
+      "type": "object",
+      "properties": {
+        "teamLabel": {
+          "type": "string",
+          "description": "The label to use for 'Team' (e.g., Team, Participant)."
+        },
+        "projectLabel": {
+          "type": "string",
+          "description": "The label to use for 'Project' (e.g., Project, Idea)."
+        }
+      },
+      "required": [
+        "teamLabel",
+        "projectLabel"
+      ]
     }
   },
   "auth": {
@@ -170,6 +190,16 @@
             "$ref": "#/entities/EvaluationCriterion"
           },
           "description": "Stores the list of all possible evaluation criteria and their active state."
+        }
+      },
+      {
+        "path": "/appConfig/labels",
+        "definition": {
+          "entityName": "AppLabels",
+          "schema": {
+            "$ref": "#/entities/AppLabels"
+          },
+          "description": "Stores customizable UI labels for the app."
         }
       }
     ]

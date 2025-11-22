@@ -20,9 +20,10 @@ import { EditTeamDialog } from './EditTeamDialog';
 interface TeamManagementProps {
   teams: Team[];
   onDeleteRequest: (team: Team) => void;
+  labels: { teamLabel: string, projectLabel: string };
 }
 
-export function TeamManagement({ teams, onDeleteRequest }: TeamManagementProps) {
+export function TeamManagement({ teams, onDeleteRequest, labels }: TeamManagementProps) {
   const [teamToEdit, setTeamToEdit] = useState<Team | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
@@ -59,8 +60,8 @@ export function TeamManagement({ teams, onDeleteRequest }: TeamManagementProps) 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Team Name</TableHead>
-              <TableHead>Project Name</TableHead>
+              <TableHead>{labels.teamLabel}</TableHead>
+              <TableHead>{labels.projectLabel}</TableHead>
               <TableHead className="text-right w-[120px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -100,6 +101,7 @@ export function TeamManagement({ teams, onDeleteRequest }: TeamManagementProps) 
         team={teamToEdit}
         isOpen={isEditDialogOpen}
         onOpenChange={handleDialogChange}
+        labels={labels}
       />
     </>
   );

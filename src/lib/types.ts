@@ -48,3 +48,9 @@ export interface EvaluationCriterion {
   active: boolean;
   maxScore: number;
 }
+
+export interface AppLabels {
+  id: string;
+  teamLabel: string;
+  projectLabel: string;
+}

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useEffect, useState, useMemo } from 'react';
-import type { Team, TeamScores, EvaluationCriterion, Score } from '@/lib/types';
+import type { Team, TeamScores, EvaluationCriterion, Score, AppLabels } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -21,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription }
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Edit } from 'lucide-react';
 import { doc, collection, query, where } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { Input } from '../ui/input';
 
 const createScoreSchema = (criteria: EvaluationCriterion[]) => {
@@ -49,9 +49,10 @@ interface ScoreFormProps {
 
 interface ScoreFormContentProps extends ScoreFormProps {
     activeCriteria: EvaluationCriterion[];
+    labels: { teamLabel: string, projectLabel: string };
 }
 
-function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: ScoreFormContentProps) {
+function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, labels }: ScoreFormContentProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,7 +129,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
         <Card>
             <CardHeader>
                 <CardTitle>Evaluating: {team.teamName}</CardTitle>
-                <CardDescription>Project: {team.projectName}</CardDescription>
+                <CardDescription>{labels.projectLabel}: {team.projectName}</CardDescription>
             </CardHeader>
             <Form {...form} key={team.id}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -213,10 +214,21 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria }: S
 
 export function ScoreForm(props: ScoreFormProps) {
   const firestore = useFirestore();
+
+  const labelsDocRef = useMemoFirebase(() => doc(firestore, 'appConfig', 'labels'), [firestore]);
+  const { data: labelsData, isLoading: labelsLoading } = useDoc<AppLabels>(labelsDocRef);
+
+  const labels = useMemo(() => ({
+    teamLabel: labelsData?.teamLabel || 'Team Name',
+    projectLabel: labelsData?.projectLabel || 'Project Name',
+  }), [labelsData]);
+
   const criteriaQuery = useMemoFirebase(() => query(collection(firestore, 'evaluationCriteria'), where('active', '==', true)), [firestore]);
   const { data: activeCriteria, isLoading: criteriaLoading } = useCollection<EvaluationCriterion>(criteriaQuery);
 
-  if (criteriaLoading || !activeCriteria) {
+  const isLoading = criteriaLoading || labelsLoading || !activeCriteria;
+
+  if (isLoading) {
     return (
       <Card>
         <CardContent className="flex justify-center items-center h-64">
@@ -226,5 +238,5 @@ export function ScoreForm(props: ScoreFormProps) {
     );
   }
   
-  return <ScoreFormContent {...props} activeCriteria={activeCriteria} />;
+  return <ScoreFormContent {...props} activeCriteria={activeCriteria} labels={labels} />;
 }

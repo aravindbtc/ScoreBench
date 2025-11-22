@@ -34,9 +34,10 @@ interface EditTeamDialogProps {
   team: Team | null;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  labels: { teamLabel: string, projectLabel: string };
 }
 
-export function EditTeamDialog({ team, isOpen, onOpenChange }: EditTeamDialogProps) {
+export function EditTeamDialog({ team, isOpen, onOpenChange, labels }: EditTeamDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -93,7 +94,7 @@ export function EditTeamDialog({ team, isOpen, onOpenChange }: EditTeamDialogPro
               name="teamName"
               render={({ field }) => (
                 <FormItem>
-                  <Label htmlFor="teamName">Team Name</Label>
+                  <Label htmlFor="teamName">{labels.teamLabel}</Label>
                   <FormControl>
                     <Input id="teamName" placeholder="e.g., The Code Crusaders" {...field} />
                   </FormControl>
@@ -106,7 +107,7 @@ export function EditTeamDialog({ team, isOpen, onOpenChange }: EditTeamDialogPro
               name="projectName"
               render={({ field }) => (
                 <FormItem>
-                  <Label htmlFor="projectName">Project Name</Label>
+                  <Label htmlFor="projectName">{labels.projectLabel}</Label>
                   <FormControl>
                     <Input id="projectName" placeholder="e.g., Eco-Friendly Drone Delivery" {...field} />
                   </FormControl>

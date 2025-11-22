@@ -34,6 +34,7 @@ interface ScoreTableProps {
   data: CombinedScoreData[];
   criteria: EvaluationCriterion[];
   onDeleteRequest: (team: CombinedScoreData) => void;
+  labels: { teamLabel: string, projectLabel: string };
 }
 
 const PanelScoreDetails = ({ panelNo, scoreData, criteria }: { panelNo: number, scoreData?: Score, criteria: EvaluationCriterion[] }) => {
@@ -148,7 +149,7 @@ const ConsolidatedFeedback = ({ scores, teamId }: { scores: TeamScores, teamId: 
 };
 
 
-export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps) {
+export function ScoreTable({ data, criteria, onDeleteRequest, labels }: ScoreTableProps) {
   const [openItemId, setOpenItemId] = useState<string | null>(null);
 
   if (data.length === 0) {
@@ -174,8 +175,8 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
             <TableHeader>
             <TableRow>
                 <TableHead className='w-[40px]'></TableHead>
-                <TableHead>Team Name</TableHead>
-                <TableHead>Project Name</TableHead>
+                <TableHead>{labels.teamLabel}</TableHead>
+                <TableHead>{labels.projectLabel}</TableHead>
                 <TableHead className="text-center w-[100px]">Panel 1</TableHead>
                 <TableHead className="text-center w-[100px]">Panel 2</TableHead>
                 <TableHead className="text-center w-[100px]">Panel 3</TableHead>
@@ -252,4 +253,3 @@ export function ScoreTable({ data, criteria, onDeleteRequest }: ScoreTableProps)
     </Card>
   );
 }
-

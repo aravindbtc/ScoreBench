@@ -32,9 +32,10 @@ type TeamFormData = z.infer<typeof teamSchema>;
 interface AddTeamDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  labels: { teamLabel: string, projectLabel: string };
 }
 
-export function AddTeamDialog({ isOpen, onOpenChange }: AddTeamDialogProps) {
+export function AddTeamDialog({ isOpen, onOpenChange, labels }: AddTeamDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -79,7 +80,7 @@ export function AddTeamDialog({ isOpen, onOpenChange }: AddTeamDialogProps) {
               name="teamName"
               render={({ field }) => (
                 <FormItem>
-                  <Label htmlFor="teamName">Team Name</Label>
+                  <Label htmlFor="teamName">{labels.teamLabel}</Label>
                   <FormControl>
                     <Input id="teamName" placeholder="e.g., The Code Crusaders" {...field} />
                   </FormControl>
@@ -92,7 +93,7 @@ export function AddTeamDialog({ isOpen, onOpenChange }: AddTeamDialogProps) {
               name="projectName"
               render={({ field }) => (
                 <FormItem>
-                  <Label htmlFor="projectName">Project Name</Label>
+                  <Label htmlFor="projectName">{labels.projectLabel}</Label>
                   <FormControl>
                     <Input id="projectName" placeholder="e.g., Eco-Friendly Drone Delivery" {...field} />
                   </FormControl>
