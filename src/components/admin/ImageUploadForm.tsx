@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, UploadCloud, Copy } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import ImageKit from 'imagekit-javascript';
 import { Progress } from '@/components/ui/progress';
+import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { initializeFirebase } from '@/lib/firebase-client';
 
 interface ImageUploadFormProps {
   onUploadComplete: (url: string) => void;
@@ -21,6 +22,10 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
   const [progress, setProgress] = useState(0);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Use a ref to hold the storage instance to prevent re-initialization on re-renders
+  const storage = useRef(initializeFirebase().storage).current;
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -41,72 +46,42 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
     setIsUploading(true);
     setProgress(0);
 
-    const processUpload = async () => {
-        try {
-            // 1. Fetch authentication parameters from our server
-            const authRes = await fetch('/api/imagekit-auth');
-            if (!authRes.ok) {
-                throw new Error('Failed to get upload credentials. Is your server running and are environment variables set?');
+    const uniqueFileName = `login-backgrounds/${new Date().getTime()}-${file.name}`;
+    const fileRef = storageRef(storage, uniqueFileName);
+
+    const uploadTask = uploadBytesResumable(fileRef, file);
+
+    uploadTask.on('state_changed', 
+        (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setProgress(progress);
+        }, 
+        (error) => {
+            console.error("Firebase Storage upload failed:", error);
+            let description = 'Could not upload the image. Check the console for details.';
+            if (error.code === 'storage/unauthorized') {
+                description = 'You do not have permission to upload files. Please check your Firebase Storage security rules.';
             }
-            const authParams = await authRes.json();
-            
-            const imagekit = new ImageKit({
-                urlEndpoint: authParams.urlEndpoint,
-                publicKey: authParams.publicKey,
-                authenticationEndpoint: '/api/imagekit-auth'
+             toast({
+                title: 'Upload Failed',
+                description,
+                variant: 'destructive',
             });
-
-            // 2. Upload the file to ImageKit
-            imagekit.upload({
-                file: file,
-                fileName: file.name,
-                token: authParams.token,
-                signature: authParams.signature,
-                expire: authParams.expire,
-                useUniqueFileName: true,
-                onUploadProgress: (progress) => {
-                    setProgress(progress.loaded / progress.total * 100);
-                }
-            }, (err, result) => {
+            setIsUploading(false);
+        }, 
+        () => {
+            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                onUploadComplete(downloadURL);
                 setIsUploading(false);
-                if (err) {
-                    console.error("ImageKit upload failed:", err);
-                    let description = 'Could not upload the image. Check the console for details.';
-                    if (String(err).includes('security')) {
-                        description = 'A security error occurred. This often means your ImageKit settings are incorrect. Please verify your keys and allowed origins in the ImageKit dashboard.';
-                    }
-                    toast({
-                        title: 'Upload Failed',
-                        description: description,
-                        variant: 'destructive',
-                    });
-                    return;
-                }
-
-                if (result) {
-                    onUploadComplete(result.url);
-                }
-                
                 setSelectedFile(null);
                 if (fileInputRef.current) {
                     fileInputRef.current.value = '';
                 }
             });
-
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'An unknown error occurred.';
-            console.error('Upload process failed:', error);
-            toast({
-                title: 'Upload Failed',
-                description: message,
-                variant: 'destructive',
-            });
-            setIsUploading(false);
         }
-    };
-    processUpload();
+    );
 
-  }, [onUploadComplete, toast]);
+  }, [onUploadComplete, storage, toast]);
 
 
   const handleUpload = () => {
@@ -136,7 +111,7 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
                     return;
                 }
                 event.preventDefault(); // Prevent the image from being pasted into any text field
-                toast({ title: 'Image Pasted!', description: 'Starting upload...' });
+                toast({ title: 'Image Pasted!', description: 'Starting upload via Firebase...' });
                 uploadFile(file);
                 break;
             }
@@ -149,13 +124,13 @@ export function ImageUploadForm({ onUploadComplete }: ImageUploadFormProps) {
       <div className="p-4 text-center border-2 border-dashed rounded-lg bg-muted/50">
         <Copy className="mx-auto h-8 w-8 text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
-          Copy an image to your clipboard and paste it here (Ctrl+V / Cmd+V).
+          Copy an image to your clipboard and paste it here (Ctrl+V / Cmd+V) to upload via Firebase.
         </p>
       </div>
 
       <div className="relative flex items-center">
         <div className="flex-grow border-t"></div>
-        <span className="flex-shrink mx-4 text-muted-foreground text-xs">OR</span>
+        <span className="flex-shrink mx-4 text-xs">OR</span>
         <div className="flex-grow border-t"></div>
       </div>
 
