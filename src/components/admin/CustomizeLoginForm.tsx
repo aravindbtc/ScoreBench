@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage, FormDescription } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -98,6 +98,9 @@ export function CustomizeLoginForm() {
                     <FormControl>
                       <Input id="imageUrl" placeholder="Upload an image or paste a URL here" {...field} />
                     </FormControl>
+                    <FormDescription>
+                        Upload your background to a service like ImageKit or Imgur, then paste the public URL here.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -1,6 +1,7 @@
 # ScoreBench - Hackathon & Competition Evaluation System
 
-ScoreBench is a modern, real-time evaluation platform designed to streamline the judging process for hackathons, ideathons, and other competitions. It provides a robust, easy-to-use interface for both administrators and jury members, backed by a powerful and scalable serverless architecture.
+ScoreBench is a - **Dual-Role Authentication**: Secure, password-protected login portals for both **Admins** and **Jury Members**.
+modern, real-time evaluation platform designed to streamline the judging process for hackathons, ideathons, and other competitions. It provides a robust, easy-to-use interface for both administrators and jury members, backed by a powerful and scalable serverless architecture.
 
 ## ✨ Key Features
 
