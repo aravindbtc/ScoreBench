@@ -44,14 +44,17 @@ const PanelScoreDetails = ({ panelNo, scoreData, criteria }: { panelNo: number, 
     );
   }
 
-  const { scores, total, remarks, aiFeedback } = scoreData;
-  const activeCriteria = criteria.filter(c => c.active && scores[c.id]);
-  const maxScore = activeCriteria.length * 10;
+  const { scores, total, remarks, aiFeedback, maxScore } = scoreData;
+  const activeCriteria = criteria.filter(c => c.active && scores[c.id] !== undefined);
+  
+  // If maxScore is not stored with the score, calculate it from the criteria that were actually scored.
+  const effectiveMaxScore = maxScore || activeCriteria.reduce((acc, c) => acc + c.maxScore, 0);
+
 
   return (
     <Card className="bg-background/50 h-full">
         <CardHeader className="p-4">
-            <CardTitle className="text-base">Panel {panelNo} Score: <span className="text-primary">{total} / {maxScore}</span></CardTitle>
+            <CardTitle className="text-base">Panel {panelNo} Score: <span className="text-primary">{total} / {effectiveMaxScore}</span></CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-0 text-sm">
             <div>

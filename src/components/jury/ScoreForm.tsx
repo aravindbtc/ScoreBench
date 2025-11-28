@@ -63,12 +63,12 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
     const [isEditing, setIsEditing] = useState(!existingPanelScore);
 
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
+    const maxScorePossible = useMemo(() => activeCriteria.reduce((acc, c) => acc + c.maxScore, 0), [activeCriteria]);
 
     const defaultValues = useMemo(() => {
         const scores = activeCriteria.reduce((acc, criterion) => {
-            // Use the specific maxScore for the default value calculation
             const existingValue = existingPanelScore?.scores?.[criterion.id];
-            acc[criterion.id] = existingValue !== undefined ? existingValue : Math.round(criterion.maxScore / 2);
+            acc[criterion.id] = existingValue !== undefined ? existingValue : 0;
             return acc;
         }, {} as {[key: string]: number});
 
@@ -81,7 +81,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
         defaultValues,
-        mode: 'onChange' // Validate on change to enable/disable button
+        mode: 'onChange'
     });
     
     useEffect(() => {
@@ -92,8 +92,9 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
 
     const watchedScores = form.watch('scores');
     
-    const totalScore = Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
-    const maxScorePossible = activeCriteria.reduce((acc, c) => acc + c.maxScore, 0);
+    const totalScore = useMemo(() => {
+      return Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
+    }, [watchedScores]);
 
 
     function onSubmit(data: ScoreFormData) {
@@ -102,7 +103,8 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
         const scoreDocRef = doc(firestore, 'scores', team.id);
         const panelField = `panel${juryPanel}`;
 
-        const panelScoreData: Score = { ...data, remarks: data.remarks || '', total: totalScore, maxScore: maxScorePossible };
+        const finalTotal = Object.values(data.scores).reduce((acc, current) => acc + (Number(current) || 0), 0);
+        const panelScoreData: Score = { ...data, remarks: data.remarks || '', total: finalTotal, maxScore: maxScorePossible };
 
         const allPanelScores: (Score | undefined)[] = [
             juryPanel === 1 ? panelScoreData : existingScores?.panel1,
@@ -113,7 +115,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
         const validScores = allPanelScores.filter((s): s is Score => s !== undefined && s.total !== undefined);
         
         const avgScore = validScores.length > 0 
-            ? validScores.reduce((acc, s) => acc + (s.total / (s.maxScore || 1)) * 100, 0) / validScores.length
+            ? validScores.reduce((acc, s) => acc + (s.total / (s.maxScore || maxScorePossible || 1)) * 100, 0) / validScores.length
             : 0;
         
         const finalData = {
