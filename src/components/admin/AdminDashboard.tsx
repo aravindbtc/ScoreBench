@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
-import type { Team, TeamScores, CombinedScoreData, Jury, EvaluationCriterion, AppLabels } from '@/lib/types';
+import type { Team, TeamScores, CombinedScoreData, Jury, EvaluationCriterion, AppLabels, Score } from '@/lib/types';
 import { ScoreTable } from './ScoreTable';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2, PlusCircle, UserPlus, ListChecks } from 'lucide-react';
