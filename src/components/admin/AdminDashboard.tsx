@@ -62,13 +62,15 @@ export function AdminDashboard() {
 
   const combinedData: CombinedScoreData[] = useMemo(() => {
     if (!teams || !scores) return [];
-    return teams.map(team => {
+    const data = teams.map(team => {
       const teamScores = scores.find(s => s.id === team.id);
       return {
         ...team,
         scores: teamScores || { id: team.id },
       };
-    }).sort((a, b) => (b.scores.avgScore ?? 0) - (a.scores.avgScore ?? 0));
+    });
+    // Sort by average score in descending order. Teams with no score (avgScore is undefined) are treated as 0 and placed at the bottom.
+    return data.sort((a, b) => (b.scores.avgScore ?? 0) - (a.scores.avgScore ?? 0));
   }, [teams, scores]);
 
   const handleExport = async () => {
