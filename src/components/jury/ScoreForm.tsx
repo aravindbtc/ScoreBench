@@ -115,7 +115,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
         const validScores = allPanelScores.filter((s): s is Score => s !== undefined && s.total !== undefined);
         
         const avgScore = validScores.length > 0 
-            ? validScores.reduce((acc, s) => acc + (s.total / (s.maxScore || maxScorePossible || 1)) * 100, 0) / validScores.length
+            ? validScores.reduce((acc, s) => acc + (s.total / (s.maxScore || 1)) * 100, 0) / validScores.length
             : 0;
         
         const finalData = {
