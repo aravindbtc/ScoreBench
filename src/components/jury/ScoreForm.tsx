@@ -26,9 +26,10 @@ import { Input } from '../ui/input';
 
 const createScoreSchema = (criteria: EvaluationCriterion[]) => {
   const schemaObject = criteria.reduce((acc, criterion) => {
+    // Ensure that each criterion in the schema uses its own specific maxScore.
     acc[criterion.id] = z.coerce.number()
         .min(0, { message: "Must be 0 or more." })
-        .max(criterion.maxScore, { message: `Must be ${criterion.maxScore} or less.` });
+        .max(criterion.maxScore, { message: `Score cannot exceed ${criterion.maxScore}.` });
     return acc;
   }, {} as Record<string, z.ZodTypeAny>);
 
@@ -63,13 +64,19 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
 
     const scoreSchema = useMemo(() => createScoreSchema(activeCriteria), [activeCriteria]);
 
-    const defaultValues = useMemo(() => ({
-        scores: activeCriteria.reduce((acc, c) => ({
-            ...acc,
-            [c.id]: existingPanelScore?.scores?.[c.id] ?? Math.round(c.maxScore / 2)
-        }), {}),
-        remarks: existingPanelScore?.remarks ?? '',
-    }), [activeCriteria, existingPanelScore]);
+    const defaultValues = useMemo(() => {
+        const scores = activeCriteria.reduce((acc, criterion) => {
+            // Use the specific maxScore for the default value calculation
+            const existingValue = existingPanelScore?.scores?.[criterion.id];
+            acc[criterion.id] = existingValue !== undefined ? existingValue : Math.round(criterion.maxScore / 2);
+            return acc;
+        }, {} as {[key: string]: number});
+
+        return {
+            scores,
+            remarks: existingPanelScore?.remarks ?? '',
+        };
+    }, [activeCriteria, existingPanelScore]);
 
     const form = useForm<ScoreFormData>({
         resolver: zodResolver(scoreSchema),
@@ -238,5 +245,6 @@ export function ScoreForm(props: ScoreFormProps) {
     );
   }
   
-  return <ScoreFormContent {...props} activeCriteria={activeCriteria} labels={labels} />;
+  // Ensure activeCriteria is not undefined before passing it
+  return <ScoreFormContent {...props} activeCriteria={activeCriteria || []} labels={labels} />;
 }
