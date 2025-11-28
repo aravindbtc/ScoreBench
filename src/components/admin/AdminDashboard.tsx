@@ -62,14 +62,32 @@ export function AdminDashboard() {
 
   const combinedData: CombinedScoreData[] = useMemo(() => {
     if (!teams || !scores) return [];
+
     const data = teams.map(team => {
-      const teamScores = scores.find(s => s.id === team.id);
+      const teamScores = scores.find(s => s.id === team.id) || { id: team.id };
+      
+      const allPanelScores: (Score | undefined)[] = [
+        teamScores.panel1,
+        teamScores.panel2,
+        teamScores.panel3,
+      ];
+
+      const validScores = allPanelScores.filter((s): s is Score => s !== undefined && s.total !== undefined);
+
+      const calculatedAvgScore = validScores.length > 0 
+        ? validScores.reduce((acc, s) => acc + (s.total / (s.maxScore || 1)) * 100, 0) / validScores.length
+        : 0;
+
       return {
         ...team,
-        scores: teamScores || { id: team.id },
+        scores: {
+            ...teamScores,
+            avgScore: calculatedAvgScore > 0 ? calculatedAvgScore : undefined,
+        }
       };
     });
-    // Sort by average score in descending order. Teams with no score (avgScore is undefined) are treated as 0 and placed at the bottom.
+
+    // Sort by average score in descending order. Teams with no score are placed at the bottom.
     return data.sort((a, b) => (b.scores.avgScore ?? 0) - (a.scores.avgScore ?? 0));
   }, [teams, scores]);
 
