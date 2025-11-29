@@ -12,6 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Loader2, Wand2, Copy, Upload } from 'lucide-react';
 import { convertTextToTeamsJson } from '@/ai/flows/convert-text-to-teams-json';
 import { Input } from '../ui/input';
+import * as XLSX from 'xlsx';
+
 
 const converterSchema = z.object({
   rawText: z.string().min(1, 'Please paste some text or upload a file to convert.'),
@@ -34,22 +36,58 @@ export function TeamAIConverterForm() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-        const text = e.target?.result as string;
-        form.setValue('rawText', text, { shouldValidate: true });
-        toast({
-            title: 'File Loaded',
-            description: `Content from "${file.name}" is ready to be converted.`,
-        });
-    };
-    reader.onerror = () => {
-        toast({
-            title: 'File Read Error',
-            description: 'Could not read the selected file.',
-            variant: 'destructive',
-        });
-    };
-    reader.readAsText(file);
+
+    const isExcelFile = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+    if (isExcelFile) {
+        reader.onload = (e) => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const text = XLSX.utils.sheet_to_csv(worksheet);
+                
+                form.setValue('rawText', text, { shouldValidate: true });
+                toast({
+                    title: 'Excel File Loaded',
+                    description: `Content from "${file.name}" is ready to be converted.`,
+                });
+            } catch (error) {
+                 toast({
+                    title: 'Excel Read Error',
+                    description: 'Could not parse the Excel file.',
+                    variant: 'destructive',
+                });
+            }
+        };
+        reader.onerror = () => {
+            toast({
+                title: 'File Read Error',
+                description: 'Could not read the selected Excel file.',
+                variant: 'destructive',
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        // Handle text-based files (.txt, .csv)
+        reader.onload = (e) => {
+            const text = e.target?.result as string;
+            form.setValue('rawText', text, { shouldValidate: true });
+            toast({
+                title: 'File Loaded',
+                description: `Content from "${file.name}" is ready to be converted.`,
+            });
+        };
+        reader.onerror = () => {
+            toast({
+                title: 'File Read Error',
+                description: 'Could not read the selected file.',
+                variant: 'destructive',
+            });
+        };
+        reader.readAsText(file);
+    }
   };
 
 
@@ -97,7 +135,7 @@ export function TeamAIConverterForm() {
             <FormItem>
               <FormLabel>Paste text or upload a file</FormLabel>
                <FormDescription>
-                Paste a list, CSV data, or unstructured notes. The AI will do its best to convert it.
+                Paste a list, CSV data, or unstructured notes from a document. The AI will convert it.
               </FormDescription>
               <FormControl>
                 <Textarea
@@ -131,7 +169,7 @@ export function TeamAIConverterForm() {
                 <div className="flex-grow border-t"></div>
             </div>
             <div className="flex items-center">
-                <Input id="file-upload" type="file" onChange={handleFileChange} className="sr-only" />
+                <Input id="file-upload" type="file" onChange={handleFileChange} className="sr-only" accept=".txt,.csv,.xlsx,.xls" />
                 <Button asChild variant="outline">
                     <label htmlFor="file-upload" className="cursor-pointer">
                         <Upload className="mr-2 h-4 w-4" /> Upload File
