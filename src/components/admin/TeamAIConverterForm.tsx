@@ -17,17 +17,27 @@ import * as XLSX from 'xlsx';
 
 const converterSchema = z.object({
   rawText: z.string().min(1, 'Please paste some text or upload a file to convert.'),
+  userPrompt: z.string().min(1, 'A prompt is required to tell the AI how to convert the data.'),
 });
+
+const defaultUserPrompt = `Analyze the text to identify distinct teams and their corresponding project names. The text could be in any format: a list, comma-separated, informal notes, etc.
+
+CRITICAL RULE 1: If a line or entry contains only a team name (with or without a number prefix), you MUST parse it as the "teamName" and set the corresponding "projectName" to an empty string "".
+
+CRITICAL RULE 2: Ignore any numbers, bullets, or commas at the start of a line when parsing the team name. For example, for "1. Team Alpha" or "1,Team Alpha", the team name is "Team Alpha".
+
+If you cannot identify any teams in the text, you MUST return an empty JSON array: [].`;
 
 export function TeamAIConverterForm() {
   const [isConverting, setIsConverting] = useState(false);
   const [convertedJson, setConvertedJson] = useState('');
   const { toast } = useToast();
 
-  const form = useForm<{ rawText: string }>({
+  const form = useForm<{ rawText: string, userPrompt: string }>({
     resolver: zodResolver(converterSchema),
     defaultValues: {
       rawText: '',
+      userPrompt: defaultUserPrompt,
     },
   });
   
@@ -91,11 +101,11 @@ export function TeamAIConverterForm() {
   };
 
 
-  const onSubmit = async (data: { rawText: string }) => {
+  const onSubmit = async (data: { rawText: string, userPrompt: string }) => {
     setIsConverting(true);
     setConvertedJson('');
     try {
-      const result = await convertTextToTeamsJson(data.rawText);
+      const result = await convertTextToTeamsJson(data);
       const prettyJson = JSON.stringify(JSON.parse(result.json), null, 2);
       setConvertedJson(prettyJson);
       toast({
@@ -127,7 +137,7 @@ export function TeamAIConverterForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="rawText"
@@ -135,7 +145,7 @@ export function TeamAIConverterForm() {
             <FormItem>
               <FormLabel>Paste text or upload a file</FormLabel>
                <FormDescription>
-                Paste a list, CSV data, or unstructured notes from a document. The AI will convert it.
+                Paste a list, CSV data, or unstructured notes. The AI will convert it based on the prompt below.
               </FormDescription>
               <FormControl>
                 <Textarea
@@ -148,6 +158,27 @@ export function TeamAIConverterForm() {
             </FormItem>
           )}
         />
+        
+        <FormField
+          control={form.control}
+          name="userPrompt"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>AI Conversion Prompt</FormLabel>
+               <FormDescription>
+                Tell the AI how to interpret your data. You can edit these instructions.
+              </FormDescription>
+              <FormControl>
+                <Textarea
+                  className="min-h-[120px] font-mono text-xs"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
 
         <div className="flex items-center gap-4">
              <Button type="submit" disabled={isConverting}>
