@@ -9,11 +9,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { Loader2, Wand2, Copy } from 'lucide-react';
+import { Loader2, Wand2, Copy, Upload } from 'lucide-react';
 import { convertTextToTeamsJson } from '@/ai/flows/convert-text-to-teams-json';
+import { Input } from '../ui/input';
 
 const converterSchema = z.object({
-  rawText: z.string().min(1, 'Please paste some text to convert.'),
+  rawText: z.string().min(1, 'Please paste some text or upload a file to convert.'),
 });
 
 export function TeamAIConverterForm() {
@@ -27,6 +28,30 @@ export function TeamAIConverterForm() {
       rawText: '',
     },
   });
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target?.result as string;
+        form.setValue('rawText', text, { shouldValidate: true });
+        toast({
+            title: 'File Loaded',
+            description: `Content from "${file.name}" is ready to be converted.`,
+        });
+    };
+    reader.onerror = () => {
+        toast({
+            title: 'File Read Error',
+            description: 'Could not read the selected file.',
+            variant: 'destructive',
+        });
+    };
+    reader.readAsText(file);
+  };
+
 
   const onSubmit = async (data: { rawText: string }) => {
     setIsConverting(true);
@@ -70,7 +95,7 @@ export function TeamAIConverterForm() {
           name="rawText"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Paste any text format</FormLabel>
+              <FormLabel>Paste text or upload a file</FormLabel>
                <FormDescription>
                 Paste a list, CSV data, or unstructured notes. The AI will do its best to convert it.
               </FormDescription>
@@ -85,20 +110,35 @@ export function TeamAIConverterForm() {
             </FormItem>
           )}
         />
-        
-        <Button type="submit" disabled={isConverting}>
-          {isConverting ? (
-            <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Converting...
-            </>
-          ) : (
-            <>
-                <Wand2 className="mr-2 h-4 w-4" />
-                Convert with AI
-            </>
-          )}
-        </Button>
+
+        <div className="flex items-center gap-4">
+             <Button type="submit" disabled={isConverting}>
+                {isConverting ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Converting...
+                    </>
+                ) : (
+                    <>
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        Convert with AI
+                    </>
+                )}
+            </Button>
+            <div className="relative flex items-center">
+                <div className="flex-grow border-t"></div>
+                <span className="flex-shrink mx-2 text-xs text-muted-foreground">OR</span>
+                <div className="flex-grow border-t"></div>
+            </div>
+            <div className="flex items-center">
+                <Input id="file-upload" type="file" onChange={handleFileChange} className="sr-only" />
+                <Button asChild variant="outline">
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                        <Upload className="mr-2 h-4 w-4" /> Upload File
+                    </label>
+                </Button>
+            </div>
+        </div>
 
         {convertedJson && (
             <div className="space-y-2 pt-4">
