@@ -39,7 +39,31 @@ export function TeamManagement({ teams, onDeleteRequest, labels }: TeamManagemen
     }
   };
 
-  const sortedTeams = [...teams].sort((a, b) => a.teamName.localeCompare(b.teamName));
+  const naturalSort = (a: Team, b: Team) => {
+    const re = /(\d+)/g;
+    const aParts = a.teamName.split(re);
+    const bParts = b.teamName.split(re);
+  
+    for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
+      const aPart = aParts[i];
+      const bPart = bParts[i];
+  
+      if (i % 2 === 1) { // It's a number part
+        const aNum = parseInt(aPart, 10);
+        const bNum = parseInt(bPart, 10);
+        if (aNum !== bNum) {
+          return aNum - bNum;
+        }
+      } else { // It's a string part
+        if (aPart !== bPart) {
+          return aPart.localeCompare(bPart);
+        }
+      }
+    }
+    return a.teamName.length - b.teamName.length;
+  };
+
+  const sortedTeams = [...teams].sort(naturalSort);
 
   if (teams.length === 0) {
     return (
