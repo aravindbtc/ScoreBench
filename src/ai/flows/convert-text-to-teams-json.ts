@@ -42,8 +42,8 @@ Each object in the array must have two keys: "teamName" and "projectName".
 
 - Analyze the text to identify distinct teams and their corresponding project names.
 - The text could be in any format: a list, comma-separated, informal notes, etc.
-- **CRITICAL RULE**: If the text appears to be a list of only team names (e.g., one team per line), you MUST parse them as "teamName" and set the corresponding "projectName" to an empty string "".
-- Ignore any numbers or bullets at the start of a line. For example, for a line like "1. Team Alpha", the team name is "Team Alpha".
+- **CRITICAL RULE**: If a line contains only a team name (with or without a number prefix), you MUST parse it as the "teamName" and set the corresponding "projectName" to an empty string "".
+- **CRITICAL RULE 2**: Ignore any numbers, bullets, or commas at the start of a line. For example, for a line like "1. Team Alpha" or "1,Team Alpha", the team name is "Team Alpha".
 - If you cannot identify any teams in the text, you MUST return an empty JSON array: [].
 - Your final output must only be the JSON string. Do not include any other text or explanations.
 
