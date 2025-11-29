@@ -6,7 +6,7 @@ import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 import type { Team, TeamScores, CombinedScoreData, Jury, EvaluationCriterion, AppLabels, Score } from '@/lib/types';
 import { ScoreTable } from './ScoreTable';
 import { Button } from '@/components/ui/button';
-import { Download, Loader2, PlusCircle, UserPlus, ListChecks } from 'lucide-react';
+import { Download, Loader2, PlusCircle, UserPlus, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { AddTeamDialog } from './AddTeamDialog';
 import {
@@ -34,6 +34,7 @@ export function AdminDashboard() {
   const [isAddJuryOpen, setIsAddJuryOpen] = useState(false);
   const [isManageCriteriaOpen, setIsManageCriteriaOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{type: 'team' | 'jury', data: any} | null>(null);
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -156,6 +157,44 @@ export function AdminDashboard() {
     }
   };
 
+  const handleDeleteAllTeams = async () => {
+    setIsDeleting(true);
+    try {
+        const batch = writeBatch(firestore);
+        
+        // Get all teams and scores
+        const teamsSnapshot = await getDocs(teamsQuery!);
+        const scoresSnapshot = await getDocs(scoresQuery!);
+
+        // Delete all teams
+        teamsSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        // Delete all scores
+        scoresSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+        
+        toast({
+            title: 'All Teams Deleted',
+            description: 'All teams and their associated scores have been permanently removed.',
+        });
+    } catch (error) {
+        console.error('Error deleting all teams:', error);
+        toast({
+            title: 'Deletion Failed',
+            description: 'Could not delete all teams. Check the console for details.',
+            variant: 'destructive',
+        });
+    } finally {
+        setIsDeleting(false);
+        setIsDeleteAllOpen(false);
+    }
+};
+
   const isLoading = teamsLoading || scoresLoading || juriesLoading || criteriaLoading || labelsLoading;
 
   return (
@@ -209,7 +248,11 @@ export function AdminDashboard() {
             </div>
           ) : (
             <>
-              <div className="text-right mb-4">
+              <div className="flex justify-end gap-2 mb-4">
+                <Button variant="outline" disabled={!teams || teams.length === 0} onClick={() => setIsDeleteAllOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete All Teams
+                </Button>
                 <Button onClick={() => setIsAddTeamOpen(true)}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Team
@@ -247,7 +290,7 @@ export function AdminDashboard() {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the {itemToDelete?.type}
-              <strong className="text-foreground"> {itemToDelete?.data?.teamName || itemToDelete?.data?.name} </strong>
+              <strong className="text-foreground"> {itemToDelete?.data?.teamName || itemToDelete?.data?.name} </strong> 
               {itemToDelete?.type === 'team' && 'and all associated scoring data.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -260,6 +303,26 @@ export function AdminDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={isDeleteAllOpen} onOpenChange={setIsDeleteAllOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to delete all teams?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action is irreversible. It will permanently delete <strong className="text-foreground">{teams?.length || 0} teams</strong> and all of their scoring data from the database.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAllTeams} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Yes, Delete All Teams
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
+    
