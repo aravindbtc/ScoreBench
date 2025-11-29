@@ -3,6 +3,7 @@ import { TeamUploadForm } from "@/components/admin/TeamUploadForm";
 import { TeamJsonPasteForm } from "@/components/admin/TeamJsonPasteForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TeamAIConverterForm } from "@/components/admin/TeamAIConverterForm";
 
 export default function UploadTeamsPage() {
   const exampleJson = `
@@ -26,15 +27,19 @@ export default function UploadTeamsPage() {
           <CardHeader>
             <CardTitle>Upload Team Data</CardTitle>
             <CardDescription>
-              Choose your preferred method: upload a JSON file or paste the JSON content directly.
+              Choose your preferred method: convert from text with AI, paste JSON, or upload a file.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="paste" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="ai-converter" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="ai-converter">Convert with AI</TabsTrigger>
                 <TabsTrigger value="paste">Paste JSON</TabsTrigger>
                 <TabsTrigger value="upload">Upload File</TabsTrigger>
               </TabsList>
+              <TabsContent value="ai-converter" className="mt-6">
+                <TeamAIConverterForm />
+              </TabsContent>
               <TabsContent value="paste" className="mt-6">
                 <TeamJsonPasteForm />
               </TabsContent>
@@ -48,7 +53,7 @@ export default function UploadTeamsPage() {
            <CardHeader>
             <CardTitle>Example JSON Format</CardTitle>
             <CardDescription>
-              Your JSON file or pasted text should contain an array of objects. The app can also intelligently parse keys like 'team_name' or 'project_title'.
+              Your final JSON should contain an array of objects. The "Convert with AI" tool will generate this for you.
             </CardDescription>
           </CardHeader>
           <CardContent>
