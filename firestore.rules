@@ -40,7 +40,7 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel1']) ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel2']) ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel3']) ||
-        (isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasAny(['avgScore', 'consolidatedFeedback']))
+        (isAdmin() && request.resource.data.diff(resource.data).hasAny(['avgScore', 'consolidatedFeedback']))
       );
       // Allow admins to delete.
       allow delete: if isAdmin();
