@@ -1,7 +1,7 @@
 
 'use server';
 
-import { initializeApp, getApps, getApp, cert } from 'firebase-admin/app';
+import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
 import { firebaseConfig } from '@/firebase/config';
