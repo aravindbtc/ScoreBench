@@ -209,7 +209,6 @@ export function EventManagement() {
                 title: 'Event Deleted',
                 description: `"${eventToDelete.name}" has been permanently removed.`,
             });
-            // Update client-side state immediately
             setDisplayEvents(prevEvents => prevEvents.filter(e => e.id !== eventToDelete.id));
             if (eventId === eventToDelete.id) {
                 setEventId(null);

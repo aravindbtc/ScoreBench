@@ -1,13 +1,10 @@
 
 'use server';
 
-import { initializeApp, getApps, getApp, cert, App, applicationDefault } from 'firebase-admin/app';
+import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
 
-
-// This function initializes the admin app, but only if it has not been initialized already
-// in the current server instance. This is a robust pattern for serverless environments.
 function getAdminApp(): App {
     if (getApps().length > 0) {
         return getApp();
@@ -22,6 +19,7 @@ function getAdminApp(): App {
         } catch (e: any) {
             if (e instanceof SyntaxError) {
                 console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string.');
+                // This specific error is critical for debugging.
                 throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
             }
             throw e; // Re-throw other errors
@@ -32,11 +30,9 @@ function getAdminApp(): App {
         });
     } 
     
-    // Fallback for local development or environments with Application Default Credentials
-    console.log("Initializing Firebase Admin with Application Default Credentials.");
-    return initializeApp({
-        credential: applicationDefault(),
-    });
+    // This fallback is unlikely to have permissions to delete.
+    // Throw an error to make it clear the service account is missing.
+    throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not set. Please add it to your .env.local file.');
 }
 
 
@@ -105,6 +101,6 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
         // Pass the specific error message back to the client
         const errorMessage = error.message || 'An unknown server error occurred during deletion.';
         
-        return { success: false, message: `Deletion failed: ${errorMessage}` };
+        return { success: false, message: errorMessage };
     }
 }
