@@ -1,14 +1,16 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/firebase';
 
 export function useAuthListener(redirectTo = '/') {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const auth = useAuth();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
@@ -16,13 +18,16 @@ export function useAuthListener(redirectTo = '/') {
         setUser(authUser);
       } else {
         setUser(null);
-        router.push(redirectTo);
+        // Only redirect if the current path is protected
+        if (window.location.pathname !== redirectTo) {
+          router.push(redirectTo);
+        }
       }
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [router, redirectTo]);
+  }, [auth, router, redirectTo]);
 
   return { user, isLoading };
 }

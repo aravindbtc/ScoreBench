@@ -6,38 +6,33 @@ import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
 import { firebaseConfig } from '@/firebase/config';
 
-
-// Helper function to initialize the admin app on-demand.
-// This is the robust way to handle initialization in a serverless environment.
-function getAdminApp() {
+// This function initializes the admin app, but only if it hasn't been initialized already
+// in the current server instance. This is a robust pattern for serverless environments.
+function getAdminApp(): App {
     if (getApps().length > 0) {
         return getApp();
     }
 
-    let serviceAccount;
-    try {
-        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-             return initializeApp({
+    // Check if the service account environment variable is available.
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        try {
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            return initializeApp({
                 credential: cert(serviceAccount),
                 databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
             });
-        } else {
-            // This is a fallback for local development or environments
-            // where application default credentials should be used.
-            console.warn("[ADMIN_SDK] FIREBASE_SERVICE_ACCOUNT env var not set. Falling back to default credentials.");
-             return initializeApp({
-                credential: applicationDefault(),
-                databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
-            });
+        } catch (e) {
+            console.error('Error parsing FIREBASE_SERVICE_ACCOUNT. Falling back to default credentials.', e);
+            // Fall through to default credentials if parsing fails
         }
-    } catch (e) {
-        console.error('[ADMIN_SDK] Error initializing Firebase Admin SDK. Falling back to default credentials.', e);
-        return initializeApp({
-            credential: applicationDefault(),
-            databaseURL: `https://{firebaseConfig.projectId}.firebaseio.com`
-        });
-    }
+    } 
+    
+    // If not available or parsing failed, use Application Default Credentials.
+    // This is a robust fallback for local development or properly configured cloud environments.
+    return initializeApp({
+        credential: applicationDefault(),
+        databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+    });
 }
 
 
@@ -72,15 +67,14 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
         } else {
             return { success: false, message: 'Incorrect password for the selected panel.' };
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("[JURY_AUTH_ERROR]", error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
-        return { success: false, message: `An unexpected error occurred during login: ${errorMessage}` };
+        return { success: false, message: `An unexpected error occurred during login: ${error.message}` };
     }
 }
 
 
-export async function deleteEvent(eventId: string): Promise<{ success: boolean, message?: string }> {
+export async function deleteEvent(eventId: string): Promise<{ success: boolean, message: string }> {
     'use server';
     if (!eventId) {
         return { success: false, message: 'Event ID is required.' };
@@ -98,7 +92,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean, 
         await db.recursiveDelete(eventRef);
 
         console.log(`[SERVER_ACTION] Successfully deleted event and all subcollections: ${eventId}`);
-        return { success: true };
+        return { success: true, message: "Event deleted successfully." };
 
     } catch (error: any) {
         console.error(`[SERVER_ACTION] FAILED to delete event ${eventId}. Full error:`, error);
@@ -106,3 +100,4 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean, 
         return { success: false, message: `Deletion failed: ${error.message || 'An unknown server error occurred.'}` };
     }
 }
+

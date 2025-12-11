@@ -1,26 +1,31 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { AppLogo } from './AppLogo';
 import { LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeToggle } from './ThemeToggle';
+import { useAuth } from '@/firebase';
 
 export function AppHeader({ userRole, children }: { userRole: 'Jury' | 'Admin', children?: React.ReactNode }) {
   const router = useRouter();
   const { toast } = useToast();
+  const auth = useAuth();
 
   const handleLogout = async () => {
     try {
       if (userRole === 'Admin') {
         sessionStorage.removeItem('admin-auth');
-      } else {
-        await signOut(auth);
+      }
+      // For both roles, sign out of Firebase to clear the anonymous user
+      await signOut(auth);
+      if (userRole === 'Jury') {
         localStorage.removeItem('juryPanel');
       }
+      
       toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
       router.push('/');
     } catch (error) {

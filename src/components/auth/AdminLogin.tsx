@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { verifyAdminPassword } from '@/lib/actions';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signInAnonymously } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/firebase';
 import { useEvent } from '@/hooks/use-event';
 
 export function AdminLogin() {
@@ -20,6 +20,7 @@ export function AdminLogin() {
   const router = useRouter();
   const { toast } = useToast();
   const { setEventId } = useEvent();
+  const auth = useAuth();
 
 
   const handleLogin = async (e: React.FormEvent) => {
