@@ -1,4 +1,3 @@
-
 'use client';
 import { EventManagement } from '@/components/admin/EventManagement';
 
