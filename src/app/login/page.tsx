@@ -26,7 +26,7 @@ export default function LoginPage() {
         <AppLogo />
       </div>
 
-      <Card className="w-full max-w-md shadow-2xl">
+      <Card className="w-full max-w-md shadow-2xl bg-background/50 backdrop-blur-sm">
         <CardHeader className="text-center">
           <h2 className="text-2xl font-bold tracking-tight">Select Your Role</h2>
           <p className="text-muted-foreground">Choose whether you are a Jury member or an Administrator.</p>
