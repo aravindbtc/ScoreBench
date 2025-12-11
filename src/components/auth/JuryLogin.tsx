@@ -95,22 +95,20 @@ export function JuryLogin() {
     <form onSubmit={handleLogin} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="event-select">Select Event</Label>
-        {eventsLoading && <p>Loading events...</p>}
-        {events && events.length > 0 && (
-           <Select onValueChange={handleEventChange} value={selectedEventId || ''}>
-            <SelectTrigger id="event-select" className="w-full">
-              <SelectValue placeholder="Select an event..." />
-            </SelectTrigger>
-            <SelectContent>
-              {events.sort((a,b) => a.name.localeCompare(b.name)).map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        {events && events.length === 0 && (
+        <Select onValueChange={handleEventChange} value={selectedEventId || ''} disabled={eventsLoading}>
+          <SelectTrigger id="event-select" className="w-full">
+            <SelectValue placeholder={eventsLoading ? 'Loading events...' : 'Select an event...'} />
+          </SelectTrigger>
+          <SelectContent>
+            {events && events.length > 0 && events.sort((a,b) => a.name.localeCompare(b.name)).map((event) => (
+              <SelectItem key={event.id} value={event.id}>
+                {event.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {!eventsLoading && (!events || events.length === 0) && (
             <div className='text-center text-sm text-muted-foreground p-4 border rounded-md'>
                 <p>No events found.</p>
             </div>

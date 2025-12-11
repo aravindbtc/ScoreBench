@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, serverTimestamp, updateDoc, writeBatch, getDocs, query } from 'firebase/firestore';
 import type { Event } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -146,15 +146,88 @@ function EventCard({ event }: { event: Event }) {
 
 export function EventManagement() {
     const firestore = useFirestore();
+    const { toast } = useToast();
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [isMigrating, setIsMigrating] = useState(true);
     
     const eventsQuery = useMemoFirebase(() => collection(firestore, 'events'), [firestore]);
     const { data: events, isLoading } = useCollection<Event>(eventsQuery);
 
+    useEffect(() => {
+        const runMigration = async () => {
+            // Only run migration if events have loaded and there are none
+            if (!isLoading && events && events.length === 0) {
+                toast({
+                    title: 'First-time Setup',
+                    description: 'Migrating existing data to the new multi-event structure. Please wait...',
+                });
+
+                try {
+                    const batch = writeBatch(firestore);
+
+                    // 1. Create the new "Unnamed Event"
+                    const newEventRef = doc(collection(firestore, 'events'));
+                    batch.set(newEventRef, {
+                        name: 'Unnamed Event',
+                        createdAt: serverTimestamp(),
+                    });
+
+                    // 2. Define old and new collection paths
+                    const collectionsToMigrate = ['teams', 'scores', 'juries', 'evaluationCriteria'];
+                    
+                    for (const collectionName of collectionsToMigrate) {
+                        const oldColRef = collection(firestore, collectionName);
+                        const oldDocsSnapshot = await getDocs(oldColRef);
+
+                        if (!oldDocsSnapshot.empty) {
+                            oldDocsSnapshot.forEach(docSnapshot => {
+                                // Path to the new sub-collection document
+                                const newDocRef = doc(firestore, `events/${newEventRef.id}/${collectionName}/${docSnapshot.id}`);
+                                batch.set(newDocRef, docSnapshot.data());
+                                // Delete the old document
+                                batch.delete(docSnapshot.ref);
+                            });
+                        }
+                    }
+
+                    // Commit all batched writes
+                    await batch.commit();
+
+                    toast({
+                        title: 'Migration Complete!',
+                        description: 'Your existing data is now under "Unnamed Event".',
+                    });
+
+                } catch (error) {
+                    console.error("Migration failed:", error);
+                    toast({
+                        title: 'Migration Failed',
+                        description: 'Could not migrate existing data. Check the console for details.',
+                        variant: 'destructive',
+                    });
+                } finally {
+                    setIsMigrating(false);
+                }
+            } else if (!isLoading) {
+                setIsMigrating(false);
+            }
+        };
+
+        runMigration();
+    }, [isLoading, events, firestore, toast]);
+
+
     const sortedEvents = useMemo(() => {
         if (!events) return [];
-        return [...events].sort((a,b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
+        // Handle potential null createdAt during migration
+        return [...events].sort((a,b) => {
+            const timeA = a.createdAt?.toDate().getTime() || 0;
+            const timeB = b.createdAt?.toDate().getTime() || 0;
+            return timeB - timeA;
+        });
     }, [events]);
+
+    const showLoadingState = isLoading || isMigrating;
 
     return (
         <div className="space-y-6">
@@ -166,10 +239,9 @@ export function EventManagement() {
                 <CreateEventDialog onEventCreated={() => setDialogOpen(false)} />
              </div>
              
-             {isLoading ? (
+             {showLoadingState ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Card><CardContent className="p-4 h-20 animate-pulse bg-muted"></CardContent></Card>
-                    <Card><CardContent className="p-4 h-20 animate-pulse bg-muted"></CardContent></Card>
+                    <Card><CardContent className="p-4 h-20 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>
                 </div>
              ) : sortedEvents.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
