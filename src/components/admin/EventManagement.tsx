@@ -148,85 +148,42 @@ export function EventManagement() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [isMigrating, setIsMigrating] = useState(true);
     
     const eventsQuery = useMemoFirebase(() => collection(firestore, 'events'), [firestore]);
     const { data: events, isLoading } = useCollection<Event>(eventsQuery);
 
+    const [isCreatingDefault, setIsCreatingDefault] = useState(true);
+
     useEffect(() => {
-        const runMigration = async () => {
-            // Only run this logic if events have loaded and there are none.
+        const setupDefaultEvent = async () => {
             if (!isLoading && events && events.length === 0) {
-                setIsMigrating(true);
-                 toast({
-                    title: 'First-time Setup',
-                    description: 'Migrating existing data to a new multi-event structure. Please wait...',
-                });
                 try {
-                    // Create the initial "Unnamed Event"
-                    const newEventRef = doc(collection(firestore, 'events'));
-                    await writeBatch(firestore)
-                        .set(newEventRef, {
-                            name: 'Unnamed Event',
-                            createdAt: serverTimestamp(),
-                        })
-                        .commit();
-                    
-                    const batch = writeBatch(firestore);
-
-                    // Define collections to migrate
-                    const collectionsToMigrate = ['teams', 'scores', 'juries', 'evaluationCriteria'];
-                    let totalDocsMigrated = 0;
-
-                    for (const collectionName of collectionsToMigrate) {
-                        const oldCollectionQuery = query(collection(firestore, collectionName));
-                        const oldDocsSnapshot = await getDocs(oldCollectionQuery);
-                        
-                        if (!oldDocsSnapshot.empty) {
-                            const newSubCollection = collection(firestore, `events/${newEventRef.id}/${collectionName}`);
-                            oldDocsSnapshot.forEach(docSnapshot => {
-                                const newDocRef = doc(newSubCollection, docSnapshot.id);
-                                batch.set(newDocRef, docSnapshot.data());
-                                totalDocsMigrated++;
-                            });
-                        }
-                    }
-
-                    if (totalDocsMigrated > 0) {
-                        await batch.commit();
-                        toast({
-                            title: 'Migration Complete!',
-                            description: `Successfully migrated ${totalDocsMigrated} records to "Unnamed Event".`,
-                        });
-                    } else {
-                         toast({
-                            title: 'Setup Complete!',
-                            description: 'Your first event "Unnamed Event" is ready.',
-                        });
-                    }
-
-                } catch (error) {
-                    console.error("Failed to migrate data:", error);
-                    toast({
-                        title: 'Migration Failed',
-                        description: 'Could not migrate existing data. Please check the console.',
-                        variant: 'destructive',
+                    await addDoc(collection(firestore, 'events'), {
+                        name: 'Unnamed Event',
+                        createdAt: serverTimestamp(),
                     });
+                    toast({
+                        title: 'Default Event Created',
+                        description: 'Your first event "Unnamed Event" is ready. Select it to start managing your competition.',
+                    });
+                } catch (error) {
+                    console.error("Error creating default event:", error);
+                    toast({ title: 'Error', description: 'Could not create the default event.', variant: 'destructive'});
                 } finally {
-                    setIsMigrating(false);
+                    setIsCreatingDefault(false);
                 }
             } else if (!isLoading) {
-                 setIsMigrating(false);
+                setIsCreatingDefault(false);
             }
         };
 
-        runMigration();
+        setupDefaultEvent();
     }, [isLoading, events, firestore, toast]);
 
 
     const sortedEvents = useMemo(() => {
         if (!events) return [];
-        // Handle potential null createdAt during migration
+        // Handle potential null createdAt during creation
         return [...events].sort((a,b) => {
             const timeA = a.createdAt?.toDate?.()?.getTime() || 0;
             const timeB = b.createdAt?.toDate?.()?.getTime() || 0;
@@ -234,7 +191,7 @@ export function EventManagement() {
         });
     }, [events]);
 
-    const showLoadingState = isLoading || isMigrating;
+    const showLoadingState = isLoading || isCreatingDefault;
 
     return (
         <div className="space-y-6">
