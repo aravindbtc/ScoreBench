@@ -1,10 +1,10 @@
-
 'use server';
 
 import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
 
+// This function is self-contained and should only be used within this server actions file.
 function getAdminApp(): App {
     if (getApps().length > 0) {
         return getApp();
@@ -13,8 +13,7 @@ function getAdminApp(): App {
     const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
     
     if (!serviceAccountEnv) {
-        // This is a critical failure. The app cannot function in any meaningful way without this.
-        throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not set. Please add it to your .env.local file as a single-line JSON string.');
+        throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not set. Please add it as a single-line JSON string to your .env.local file.');
     }
 
     let serviceAccount;
@@ -23,7 +22,6 @@ function getAdminApp(): App {
     } catch (e: any) {
         if (e instanceof SyntaxError) {
             console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string.');
-            // This specific error is critical for debugging.
             throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
         }
         throw e; // Re-throw other errors
@@ -75,10 +73,6 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
 
 export async function deleteEvent(eventId: string): Promise<{ success: boolean; message: string }> {
     'use server';
-    console.log("Attempting to delete event:", eventId);
-    console.log("SERVICE ACCOUNT RAW:", process.env.FIREBASE_SERVICE_ACCOUNT ? "Exists" : "Not Set");
-
-
     if (!eventId) {
         return { success: false, message: 'Event ID is required.' };
     }
@@ -91,15 +85,11 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
         
         await db.recursiveDelete(eventRef);
 
-        console.log("Successfully deleted event:", eventId);
         return { success: true, message: "Event deleted successfully." };
 
     } catch (error: any) {
         console.error(`[SERVER_ACTION_ERROR] Failed to delete event ${eventId}:`, error);
-        
-        // Pass the specific error message back to the client
         const errorMessage = error.message || 'An unknown server error occurred during deletion.';
-        
         return { success: false, message: errorMessage };
     }
 }
