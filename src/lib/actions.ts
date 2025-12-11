@@ -1,7 +1,7 @@
 
 'use server';
 
-import { initializeApp, getApps, getApp, cert, App, applicationDefault } from 'firebase-admin/app';
+import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
 
@@ -31,10 +31,7 @@ function getAdminApp(): App {
         }
     } 
     
-    // If the service account env var is not set, use Application Default Credentials.
-    return initializeApp({
-        credential: applicationDefault(),
-    });
+    throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set.');
 }
 
 
@@ -76,8 +73,15 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
 }
 
 
-export async function deleteEvent(eventId: string): Promise<{ success: boolean, message: string }> {
+export async function deleteEvent(eventId: string): Promise<{ success: boolean; message: string }> {
     'use server';
+
+    // --- DEBUGGING STEP ---
+    // This will print the raw environment variable to your server console.
+    console.log("SERVICE ACCOUNT RAW:", process.env.FIREBASE_SERVICE_ACCOUNT);
+    // --- END DEBUGGING STEP ---
+
+
     if (!eventId) {
         return { success: false, message: 'Event ID is required.' };
     }
@@ -98,10 +102,10 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean, 
         console.error(`[SERVER_ACTION] FAILED to delete event ${eventId}. Full error:`, error);
         
         let errorMessage = 'An unknown server error occurred.';
-        if (error instanceof SyntaxError || (error.message && error.message.includes('JSON'))) {
+         if (error instanceof SyntaxError || (error.message && error.message.includes('JSON'))) {
              errorMessage = 'The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.';
         } else if (error.code === 'permission-denied' || (error.message && error.message.includes('permission'))) {
-            errorMessage = 'Permission denied. The server does not have the required permissions to delete this data.';
+            errorMessage = 'Permission denied. This usually means the Firebase Admin credentials are not set up correctly.';
         } else if (error.message) {
             errorMessage = error.message;
         }
