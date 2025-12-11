@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,10 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormMessage, FormDescription } 
 import { Loader2 } from 'lucide-react';
 import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useFirestore } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const formSchema = z.object({
@@ -25,7 +22,11 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function CustomizeLoginForm() {
+interface CustomizeLoginFormProps {
+    configId: 'loginBackground' | 'preLandingBackground';
+}
+
+export function CustomizeLoginForm({ configId }: CustomizeLoginFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -37,13 +38,18 @@ export function CustomizeLoginForm() {
     },
   });
 
+  const docRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'appConfig', configId);
+  }, [firestore, configId]);
+  
+  const { data: existingData } = useDoc<{ imageUrl: string }>(docRef);
+
   useEffect(() => {
-    // Set the initial value from the local placeholder file
-    const initialBg = PlaceHolderImages.find(p => p.id === 'login-background');
-    if (initialBg?.imageUrl) {
-        form.setValue('imageUrl', initialBg.imageUrl);
+    if (existingData?.imageUrl) {
+        form.setValue('imageUrl', existingData.imageUrl);
     }
-  }, [form]);
+  }, [existingData, form]);
 
   const handleUploadComplete = (url: string) => {
     form.setValue('imageUrl', url, { shouldValidate: true });
@@ -54,6 +60,7 @@ export function CustomizeLoginForm() {
   };
   
   const onSubmit = async (data: FormValues) => {
+    if (!docRef) return;
     if (!data.imageUrl) {
         toast({
             title: 'Error',
@@ -64,12 +71,11 @@ export function CustomizeLoginForm() {
     }
     setIsSaving(true);
     
-    const docRef = doc(firestore, 'appConfig', 'loginBackground');
     setDocumentNonBlocking(docRef, { imageUrl: data.imageUrl });
 
     toast({
         title: 'Success!',
-        description: 'The login background has been updated. It may take a moment to reflect.',
+        description: 'The background has been updated. It may take a moment to reflect.',
     });
 
     setIsSaving(false);

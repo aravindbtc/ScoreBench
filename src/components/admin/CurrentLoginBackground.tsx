@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -10,26 +9,31 @@ import { Button } from '../ui/button';
 import { Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { doc } from 'firebase/firestore';
-import { useDoc, useFirestore } from '@/firebase';
-import { db } from '@/lib/firebase';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 
-export function CurrentLoginBackground() {
+interface CurrentLoginBackgroundProps {
+    configId: 'loginBackground' | 'preLandingBackground';
+}
+
+export function CurrentLoginBackground({ configId }: CurrentLoginBackgroundProps) {
     const { toast } = useToast();
     const firestore = useFirestore();
 
-    const loginBgConfigRef = useMemo(() => doc(firestore, 'appConfig', 'loginBackground'), [firestore]);
+    const loginBgConfigRef = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return doc(firestore, 'appConfig', configId);
+    }, [firestore, configId]);
+
     const { data, isLoading, error } = useDoc<{imageUrl: string}>(loginBgConfigRef);
 
     const [imageUrl, setImageUrl] = useState<string | null>(null);
 
     useEffect(() => {
-        const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
         if (data?.imageUrl) {
             setImageUrl(data.imageUrl);
         } else if (!isLoading) {
-            // If there's no data from Firestore, use the local fallback
-            setImageUrl(fallback?.imageUrl || null);
+            // Use a default placeholder if no image is set
+            setImageUrl('https://images.unsplash.com/photo-1554189097-9e73e9363344?q=80&w=2070&auto=format&fit=crop');
         }
     }, [data, isLoading]);
 
@@ -43,7 +47,7 @@ export function CurrentLoginBackground() {
         }
     };
 
-    if (isLoading) {
+    if (isLoading || !imageUrl) {
         return <Skeleton className="aspect-video w-full" />;
     }
 
@@ -54,32 +58,24 @@ export function CurrentLoginBackground() {
             </div>
         );
     }
-    
-    if (!imageUrl) {
-        return (
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg border flex items-center justify-center bg-muted">
-                <p className="text-sm text-muted-foreground">No background image is set.</p>
-            </div>
-        );
-    }
 
     return (
         <div className="space-y-4">
             <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
                 <Image
                     src={imageUrl}
-                    alt="Current login background"
+                    alt="Current background"
                     fill
                     className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 33vw"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                     priority
                 />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="current-image-url">Image URL</Label>
+                <Label htmlFor={`current-image-url-${configId}`}>Image URL</Label>
                 <div className="flex items-start gap-2">
                     <Textarea 
-                      id="current-image-url" 
+                      id={`current-image-url-${configId}`}
                       readOnly 
                       value={imageUrl} 
                       className="text-xs h-24" 

@@ -7,4 +7,5 @@ export type ImagePlaceholder = {
   imageHint: string;
 };
 
-export const PlaceHolderImages: ImagePlaceholder[] = data.placeholderImages;
+// The type assertion is needed because the JSON file can be empty.
+export const PlaceHolderImages: ImagePlaceholder[] = (data as any).placeholderImages || [];

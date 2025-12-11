@@ -1,67 +1,36 @@
-
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { JuryLogin } from '@/components/auth/JuryLogin';
-import { AdminLogin } from '@/components/auth/AdminLogin';
-import { AppLogo } from '@/components/layout/AppLogo';
-import { LoginBackground } from '@/components/auth/LoginBackground';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { LoginBackground } from '@/components/auth/LoginBackground';
+import { AppLogo } from '@/components/layout/AppLogo';
+import { ArrowRight } from 'lucide-react';
 
-function getLoginBackgroundUrl() {
-  const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
-  return fallback?.imageUrl;
-}
-
-export default function LoginPage() {
-  const backgroundImageUrl = getLoginBackgroundUrl();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
+export default function PreLandingPage() {
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
+    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 text-center">
       <Suspense fallback={<Skeleton className="absolute inset-0 -z-10" />}>
-        <LoginBackground fallbackImageUrl={backgroundImageUrl} />
+        <LoginBackground configId="preLandingBackground" />
       </Suspense>
       
-      <div className="absolute top-6 left-6">
-        <AppLogo />
+      <div className="z-10 flex flex-col items-center space-y-6">
+        <div className="absolute top-6 left-6">
+            <AppLogo />
+        </div>
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-lg">
+            Welcome to ScoreBench
+        </h1>
+        <p className="text-lg md:text-xl text-white/90 drop-shadow-md max-w-2xl">
+            The modern, real-time evaluation platform for hackathons, ideathons, and competitions.
+        </p>
+        <Button asChild size="lg">
+          <Link href="/login">
+            Get Started <ArrowRight className="ml-2 h-5 w-5" />
+          </Link>
+        </Button>
       </div>
-
-      <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight">Welcome to ScoreBench</h2>
-          <p className="text-muted-foreground">Select your role to proceed</p>
-        </CardHeader>
-        <CardContent>
-          {isClient ? (
-            <Tabs defaultValue="jury" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="jury">Jury</TabsTrigger>
-                <TabsTrigger value="admin">Admin</TabsTrigger>
-              </TabsList>
-              <TabsContent value="jury" className="mt-6">
-                <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-                  <JuryLogin />
-                </Suspense>
-              </TabsContent>
-              <TabsContent value="admin" className="mt-6">
-                 <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-                  <AdminLogin />
-                </Suspense>
-              </TabsContent>
-            </Tabs>
-          ) : (
-             <Skeleton className="h-64 w-full" />
-          )}
-        </CardContent>
-      </Card>
     </main>
   );
 }
