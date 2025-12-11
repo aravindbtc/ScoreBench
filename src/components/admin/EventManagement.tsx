@@ -227,7 +227,7 @@ export function EventManagement() {
         setEventToDelete(null);
     }
 
-    const showLoadingState = isLoading;
+    const showLoadingState = isLoading && !events;
 
     return (
         <div className="space-y-6">

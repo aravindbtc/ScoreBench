@@ -6,7 +6,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
 
 
-// This function initializes the admin app, but only if it has been initialized already
+// This function initializes the admin app, but only if it has not been initialized already
 // in the current server instance. This is a robust pattern for serverless environments.
 function getAdminApp(): App {
     if (getApps().length > 0) {
@@ -22,7 +22,7 @@ function getAdminApp(): App {
         } catch (e: any) {
             if (e instanceof SyntaxError) {
                 console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string.');
-                throw new Error('The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
+                throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
             }
             throw e; // Re-throw other errors
         }
@@ -32,6 +32,7 @@ function getAdminApp(): App {
         });
     } 
     
+    // Fallback for local development or environments with Application Default Credentials
     console.log("Initializing Firebase Admin with Application Default Credentials.");
     return initializeApp({
         credential: applicationDefault(),
@@ -79,6 +80,9 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
 
 export async function deleteEvent(eventId: string): Promise<{ success: boolean; message: string }> {
     'use server';
+    console.log("Attempting to delete event:", eventId);
+    console.log("SERVICE ACCOUNT RAW:", process.env.FIREBASE_SERVICE_ACCOUNT ? "Exists" : "Not Set");
+
 
     if (!eventId) {
         return { success: false, message: 'Event ID is required.' };
@@ -92,18 +96,14 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
         
         await db.recursiveDelete(eventRef);
 
+        console.log("Successfully deleted event:", eventId);
         return { success: true, message: "Event deleted successfully." };
 
     } catch (error: any) {
         console.error(`[SERVER_ACTION_ERROR] Failed to delete event ${eventId}:`, error);
         
-        // Default error message
-        let errorMessage = 'An unknown server error occurred during deletion.';
-        
-        // Provide more specific feedback if possible
-        if (error.message) {
-            errorMessage = error.message;
-        }
+        // Pass the specific error message back to the client
+        const errorMessage = error.message || 'An unknown server error occurred during deletion.';
         
         return { success: false, message: `Deletion failed: ${errorMessage}` };
     }
