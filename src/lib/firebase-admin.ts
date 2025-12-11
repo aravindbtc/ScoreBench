@@ -1,6 +1,4 @@
 
-'use server';
-
 import { initializeApp, getApps, getApp, cert, App, applicationDefault } from 'firebase-admin/app';
 import { firebaseConfig } from '@/firebase/config';
 
