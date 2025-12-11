@@ -1,4 +1,3 @@
-
 'use client';
 
 import { AdminAuth } from '@/components/auth/AdminAuth';
@@ -19,8 +18,7 @@ export default function AdminLayout({
 
   // The Events page is always visible.
   // The other management links are only visible if an event is selected.
-  // Exception: allow showing links on the /admin/events page itself to prevent layout shift upon selection.
-  const showManagementLinks = eventId || pathname === '/admin/events';
+  const showManagementLinks = !!eventId;
 
   const navItems = (
     <>
@@ -28,7 +26,7 @@ export default function AdminLayout({
             <Home className="mr-2 h-4 w-4" />
             Events
         </NavLink>
-        {showManagementLinks && eventId && (
+        {showManagementLinks && (
           <>
             <NavLink href="/admin">
                 <BarChart className="mr-2 h-4 w-4" />
@@ -44,7 +42,7 @@ export default function AdminLayout({
             </NavLink>
             <NavLink href="/admin/upload-image">
                 <Image className="mr-2 h-4 w-4" />
-                Customize Login
+                Customize Backgrounds
             </NavLink>
             <NavLink href="/admin/settings">
                 <Settings className="mr-2 h-4 w-4" />
