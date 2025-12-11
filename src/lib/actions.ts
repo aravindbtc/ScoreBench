@@ -1,6 +1,6 @@
 'use server';
 
-import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
+import { initializeApp, getApps, getApp, cert, App, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
 
@@ -13,7 +13,15 @@ function getAdminApp(): App {
     const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
     
     if (!serviceAccountEnv) {
-        throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not set. Please add it as a single-line JSON string to your .env.local file.');
+         // Fallback for environments like Google Cloud Run where ADC is available.
+        try {
+            return initializeApp({
+                credential: applicationDefault(),
+            });
+        } catch (e) {
+            console.error("CRITICAL: FIREBASE_SERVICE_ACCOUNT is not set and Application Default Credentials are not available.", e);
+            throw new Error('Deletion Failed: Server is not configured with admin credentials. Please set the FIREBASE_SERVICE_ACCOUNT environment variable.');
+        }
     }
 
     let serviceAccount;
@@ -78,12 +86,15 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     }
 
     try {
+        console.log("Attempting to initialize admin app for deletion...");
         const adminApp = getAdminApp();
         const db = getFirestore(adminApp);
         
         const eventRef = db.doc(`events/${eventId}`);
+        console.log(`Starting recursive deletion for event: ${eventRef.path}`);
         
         await db.recursiveDelete(eventRef);
+        console.log(`Successfully deleted event: ${eventId}`);
 
         return { success: true, message: "Event deleted successfully." };
 
