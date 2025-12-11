@@ -16,7 +16,7 @@ export default function PreLandingPage() {
         <LoginBackground configId="preLandingBackground" />
       </Suspense>
       
-      <div className="z-10 flex flex-col items-center space-y-6 rounded-xl bg-background/20 backdrop-blur-sm p-8">
+      <div className="z-10 flex flex-col items-center space-y-6 rounded-xl bg-background/10 backdrop-blur-sm p-8">
         <div className="absolute top-6 left-6">
             <AppLogo />
         </div>
