@@ -1,9 +1,43 @@
 
 'use server';
 
-import { getAdminApp } from './firebase-admin';
+import { initializeApp, getApps, getApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
-import { CollectionReference, Query, WriteBatch } from 'firebase-admin/firestore';
+import { firebaseConfig } from '@/firebase/config';
+
+
+// Helper function to initialize the admin app on-demand.
+// This is the robust way to handle initialization in a serverless environment.
+function getAdminApp() {
+    if (getApps().length > 0) {
+        return getApp();
+    }
+
+    let serviceAccount;
+    try {
+        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        } else {
+            // This is a fallback for local development or environments
+            // where application default credentials should be used.
+            console.warn("FIREBASE_SERVICE_ACCOUNT env var not set. Falling back to default credentials. This is expected for local development.");
+             return initializeApp({
+                databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+            });
+        }
+    } catch (e) {
+        console.error('Error parsing FIREBASE_SERVICE_ACCOUNT. Falling back to default credentials.', e);
+        return initializeApp({
+            databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+        });
+    }
+    
+    return initializeApp({
+        credential: cert(serviceAccount),
+        databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+    });
+}
 
 
 export async function verifyAdminPassword(password: string) {
@@ -19,7 +53,7 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
     'use server';
     try {
         const adminApp = getAdminApp();
-        const db = adminApp.firestore();
+        const db = getFirestore(adminApp);
         const panelNumber = parseInt(panelNo, 10);
         const juriesCollectionRef = db.collection(`events/${eventId}/juries`);
         const q = juriesCollectionRef.where('panelNo', '==', panelNumber);
@@ -44,17 +78,6 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
 }
 
 
-async function deleteCollection(collectionRef: CollectionReference | Query, batch: WriteBatch): Promise<void> {
-    const snapshot = await collectionRef.get();
-    if (snapshot.size === 0) {
-        return;
-    }
-
-    snapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-    });
-}
-
 export async function deleteEvent(eventId: string): Promise<{ success: boolean, message?: string }> {
     'use server';
     if (!eventId) {
@@ -62,28 +85,17 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean, 
     }
 
     try {
-        console.log(`[SERVER ACTION] Deleting event: ${eventId}`);
+        console.log(`[SERVER ACTION] Initializing Admin SDK to delete event: ${eventId}`);
         const adminApp = getAdminApp();
-        const db = adminApp.firestore();
+        const db = getFirestore(adminApp);
         
         const eventRef = db.doc(`events/${eventId}`);
-        const batch = db.batch();
-
-        // Target all subcollections for deletion
-        const subcollections = ['teams', 'scores', 'juries', 'evaluationCriteria'];
-        for (const subcollection of subcollections) {
-            const collectionPath = `${eventRef.path}/${subcollection}`;
-            console.log(`[SERVER ACTION] Deleting subcollection: ${collectionPath}`);
-            const subcollectionRef = db.collection(collectionPath);
-            await deleteCollection(subcollectionRef, batch);
-        }
-
-        // Delete the main event document
-        console.log(`[SERVER ACTION] Deleting main event document: ${eventRef.path}`);
-        batch.delete(eventRef);
-
-        // Commit the batch
-        await batch.commit();
+        
+        console.log(`[SERVER ACTION] Starting recursive delete for document: ${eventRef.path}`);
+        
+        // Use the built-in recursiveDelete method.
+        // This is the most efficient and reliable way to delete a document and all its subcollections.
+        await db.recursiveDelete(eventRef);
 
         console.log(`[SERVER ACTION] Successfully deleted event and all subcollections: ${eventId}`);
         return { success: true };
