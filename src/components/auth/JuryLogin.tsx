@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -48,6 +49,11 @@ export function JuryLogin() {
                 {event.name}
               </SelectItem>
             ))}
+             {events && events.length === 0 && (
+                <div className="text-center text-sm text-muted-foreground p-4">
+                    No events found.
+                </div>
+            )}
           </SelectContent>
         </Select>
 
@@ -64,7 +70,7 @@ export function JuryLogin() {
         )}
       </div>
 
-       <div className='text-center text-sm text-muted-foreground pt-2'>
+       <div className='text-center text-sm text-blue-950 dark:text-blue-200 pt-2'>
         <p>After selecting an event, you will be prompted to choose your panel and enter a password.</p>
       </div>
     </div>

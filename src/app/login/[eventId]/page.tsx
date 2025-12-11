@@ -107,7 +107,7 @@ export default function JuryPanelLoginPage() {
         <Card className="w-full max-w-md shadow-2xl bg-background/10 backdrop-blur-sm">
             <CardHeader className="text-center">
                  <h2 className="text-2xl font-bold tracking-tight text-primary">Jury Panel Login</h2>
-                <p className="text-muted-foreground text-foreground/80">{eventData?.name || 'Select your panel and enter the password to continue.'}</p>
+                <p className="text-blue-950 dark:text-blue-200">{eventData?.name || 'Select your panel and enter the password to continue.'}</p>
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleLogin} className="space-y-4">
