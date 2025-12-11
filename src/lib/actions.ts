@@ -1,3 +1,4 @@
+
 'use server';
 
 import { initializeApp, getApps, getApp, cert, App, applicationDefault } from 'firebase-admin/app';
@@ -13,7 +14,7 @@ function getAdminApp(): App {
     const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
     
     if (!serviceAccountEnv) {
-         // Fallback for environments like Google Cloud Run where ADC is available.
+        // Fallback for environments like Google Cloud Run where ADC is available.
         try {
             console.log("Initializing Firebase Admin with Application Default Credentials...");
             return initializeApp({
@@ -27,16 +28,18 @@ function getAdminApp(): App {
 
     let serviceAccount;
     try {
-        serviceAccount = JSON.parse(serviceAccountEnv);
+        // This is the critical fix: Replace literal \n with escaped \\n in the private key.
+        const correctedServiceAccountString = serviceAccountEnv.replace(/\\n/g, '\\\\n');
+        serviceAccount = JSON.parse(correctedServiceAccountString);
     } catch (e: any) {
         if (e instanceof SyntaxError) {
-            console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string.');
+            console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string, or the private key formatting is incorrect.', e);
             throw new Error('The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
         }
         throw e; // Re-throw other errors
     }
     
-    console.log("Initializing Firebase Admin with Service Account...");
+    console.log("Initializing Firebase Admin with corrected Service Account...");
     return initializeApp({
         credential: cert(serviceAccount),
     });
