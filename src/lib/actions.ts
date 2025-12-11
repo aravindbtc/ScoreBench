@@ -18,7 +18,8 @@ export async function verifyAdminPassword(password: string) {
 export async function verifyJuryPassword(eventId: string, panelNo: string, password:string) {
     'use server';
     try {
-        const db = getAdminApp().firestore();
+        const adminApp = getAdminApp();
+        const db = adminApp.firestore();
         const panelNumber = parseInt(panelNo, 10);
         const juriesCollectionRef = db.collection(`events/${eventId}/juries`);
         const q = query(juriesCollectionRef, where('panelNo', '==', panelNumber));
@@ -55,28 +56,26 @@ export async function deleteEvent(eventId: string) {
         const db = adminApp.firestore();
         const eventRef = db.doc(`events/${eventId}`);
 
-        console.log(`[SERVER ACTION] Attempting to delete event document at path: ${eventRef.path}`);
+        console.log(`[SERVER ACTION] Deleting subcollections for event: ${eventId}`);
         
-        // Temporarily simplify to only delete the main document to isolate the issue.
-        await eventRef.delete();
-
-        /*
-        // Original subcollection deletion logic (commented out for debugging)
-        const batch = db.batch();
+        // Delete subcollections first
         const subcollections = ['teams', 'scores', 'juries', 'evaluationCriteria'];
         for (const sub of subcollections) {
-            const subcollectionRef = db.collection(`events/${eventId}/${sub}`);
+            const subcollectionRef = db.collection(eventRef.path).doc(eventId).collection(sub);
             const snapshot = await subcollectionRef.get();
-            snapshot.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
+            if (snapshot.size > 0) {
+                const batch = db.batch();
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+            }
         }
         
-        batch.delete(eventRef);
-        await batch.commit();
-        */
+        console.log(`[SERVER ACTION] Deleting main event document: ${eventRef.path}`);
+        await eventRef.delete();
 
-        console.log(`[SERVER ACTION] Successfully deleted event document: ${eventId}`);
+        console.log(`[SERVER ACTION] Successfully deleted event: ${eventId}`);
         return { success: true };
 
     } catch (error) {
