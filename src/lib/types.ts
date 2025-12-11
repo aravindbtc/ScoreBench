@@ -5,6 +5,7 @@ export interface Event {
   id: string;
   name: string;
   createdAt: Timestamp;
+  backgroundImageUrl?: string;
 }
 
 export interface Team {

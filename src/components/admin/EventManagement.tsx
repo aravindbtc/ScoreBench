@@ -3,12 +3,12 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, doc, serverTimestamp, updateDoc, writeBatch, getDocs, query } from 'firebase/firestore';
+import { collection, addDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import type { Event } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, PlusCircle, ArrowRight, Edit, Check } from 'lucide-react';
+import { Loader2, PlusCircle, ArrowRight, Edit, Check, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useEvent } from '@/hooks/use-event';
 import { useRouter } from 'next/navigation';
@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { EventImageDialog } from './EventImageDialog';
 
 function CreateEventDialog({ onEventCreated }: { onEventCreated: () => void }) {
     const [eventName, setEventName] = useState('');
@@ -90,6 +91,7 @@ function EventCard({ event }: { event: Event }) {
     const [isEditing, setIsEditing] = useState(false);
     const [eventName, setEventName] = useState(event.name);
     const [isSaving, setIsSaving] = useState(false);
+    const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
     const firestore = useFirestore();
     const { toast } = useToast();
 
@@ -118,8 +120,8 @@ function EventCard({ event }: { event: Event }) {
     };
     
     return (
-        <Card>
-            <CardContent className="p-4 flex items-center justify-between">
+        <Card className="flex flex-col">
+            <CardContent className="p-4 flex items-center justify-between flex-grow">
                 {isEditing ? (
                     <div className="flex-grow flex items-center gap-2">
                         <Input value={eventName} onChange={(e) => setEventName(e.target.value)} disabled={isSaving} />
@@ -139,6 +141,13 @@ function EventCard({ event }: { event: Event }) {
                     Manage <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
             </CardContent>
+             <div className="border-t p-2 flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => setIsImageDialogOpen(true)}>
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    Edit Background
+                </Button>
+            </div>
+            <EventImageDialog event={event} isOpen={isImageDialogOpen} onOpenChange={setIsImageDialogOpen} />
         </Card>
     );
 }
@@ -205,7 +214,8 @@ export function EventManagement() {
              
              {showLoadingState ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Card><CardContent className="p-4 h-20 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>
+                    <Card><CardContent className="p-4 h-28 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>
+                    <Card><CardContent className="p-4 h-28 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>
                 </div>
              ) : sortedEvents.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

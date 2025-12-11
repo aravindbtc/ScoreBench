@@ -1,0 +1,242 @@
+
+{
+  "entities": {
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "Represents a hackathon or competition event.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the event."
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp when the event was created."
+        },
+        "backgroundImageUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "The URL for the event's custom background image."
+        }
+      },
+      "required": ["name", "createdAt"]
+    },
+    "Team": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Team",
+      "type": "object",
+      "description": "Represents a team participating in the hackathon.",
+      "properties": {
+        "teamId": {
+          "type": "string",
+          "description": "Unique identifier for the Team entity."
+        },
+        "teamName": {
+          "type": "string",
+          "description": "The name of the team."
+        },
+        "projectName": {
+          "type": "string",
+          "description": "The name of the project the team is working on."
+        }
+      },
+      "required": [
+        "teamName",
+        "projectName"
+      ]
+    },
+    "Score": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Score",
+      "type": "object",
+      "description": "Represents the scores given to a team by the jury members.",
+      "properties": {
+        "teamId": {
+          "type": "string",
+          "description": "Reference to Team. (Relationship: Team 1:N Score)"
+        },
+        "panel1": {
+          "type": "object",
+          "description": "Scores from panel 1"
+        },
+        "panel2": {
+          "type": "object",
+          "description": "Scores from panel 2"
+        },
+        "panel3": {
+          "type": "object",
+          "description": "Scores from panel 3"
+        },
+        "avgScore": {
+          "type": "number",
+          "description": "The average score calculated from the panel scores."
+        },
+        "autoFeedback": {
+          "type": "string",
+          "description": "AI generated feedback for the team."
+        },
+        "consolidatedFeedback": {
+          "type": "string",
+          "description": "A single, AI-generated summary of feedback from all panels."
+        }
+      },
+      "required": [
+        "teamId"
+      ]
+    },
+    "Jury": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Jury",
+      "type": "object",
+      "description": "Represents a jury member for a specific event.",
+      "properties": {
+        "juryId": {
+          "type": "string",
+          "description": "Unique identifier for the Jury entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the jury member."
+        },
+        "panelNo": {
+          "type": "number",
+          "description": "The panel number assigned to the jury member."
+        },
+        "password": {
+          "type": "string",
+          "description": "Password for the jury panel."
+        }
+      },
+      "required": [
+        "name",
+        "panelNo",
+        "password"
+      ]
+    },
+    "EvaluationCriterion": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EvaluationCriterion",
+      "description": "A single criterion used for judging hackathon projects for a specific event.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The display name of the criterion (e.g., 'Innovation & Originality')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A short explanation of what the criterion measures."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether this criterion is currently active for scoring."
+        },
+        "maxScore": {
+            "type": "number",
+            "description": "The maximum possible score for this criterion."
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "active",
+        "maxScore"
+      ]
+    },
+    "AppLabels": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AppLabels",
+      "description": "Customizable labels for the application UI.",
+      "type": "object",
+      "properties": {
+        "teamLabel": {
+          "type": "string",
+          "description": "The label to use for 'Team' (e.g., Team, Participant)."
+        },
+        "projectLabel": {
+          "type": "string",
+          "description": "The label to use for 'Project' (e.g., Project, Idea)."
+        }
+      },
+      "required": [
+        "teamLabel",
+        "projectLabel"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/events/{eventId}",
+        "definition": {
+          "entityName": "Event",
+          "schema": {
+            "$ref": "#/entities/Event"
+          },
+          "description": "Stores information about each event.",
+          "subcollections": [
+            {
+              "path": "teams/{teamId}",
+              "definition": {
+                "entityName": "Team",
+                "schema": {
+                  "$ref": "#/entities/Team"
+                },
+                "description": "Stores information about each team participating in this event."
+              }
+            },
+            {
+              "path": "scores/{teamId}",
+              "definition": {
+                "entityName": "Score",
+                "schema": {
+                  "$ref": "#/entities/Score"
+                },
+                "description": "Stores scores given to a team by the jury members for this event."
+              }
+            },
+            {
+              "path": "juries/{juryId}",
+              "definition": {
+                "entityName": "Jury",
+                "schema": {
+                  "$ref": "#/entities/Jury"
+                },
+                "description": "Stores information about jury members for this event."
+              }
+            },
+            {
+              "path": "evaluationCriteria/{criterionId}",
+              "definition": {
+                "entityName": "EvaluationCriterion",
+                "schema": {
+                  "$ref": "#/entities/EvaluationCriterion"
+                },
+                "description": "Stores the evaluation criteria for this event."
+              }
+            }
+          ]
+        }
+      },
+      {
+        "path": "/appConfig/labels",
+        "definition": {
+          "entityName": "AppLabels",
+          "schema": {
+            "$ref": "#/entities/AppLabels"
+          },
+          "description": "Stores customizable UI labels for the app."
+        }
+      }
+    ]
+  }
+}

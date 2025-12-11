@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -14,9 +15,9 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import type { Jury } from '@/lib/types';
-import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import type { Jury, Event } from '@/lib/types';
+import { useAuth, useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { verifyJuryPassword } from '@/lib/actions';
 import { useEvent } from '@/hooks/use-event';
@@ -39,6 +40,12 @@ export default function JuryPanelLoginPage() {
   const auth = useAuth();
   const firestore = useFirestore();
   const { setEventId } = useEvent();
+
+  const eventDocRef = useMemoFirebase(() => {
+    if (!eventId) return null;
+    return doc(firestore, 'events', eventId);
+  }, [firestore, eventId]);
+  const { data: eventData } = useDoc<Event>(eventDocRef);
 
   const juriesQuery = useMemoFirebase(() => {
     if (!eventId) return null;
@@ -91,7 +98,7 @@ export default function JuryPanelLoginPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
         <Suspense fallback={<Skeleton className="absolute inset-0 -z-10" />}>
-            <LoginBackground configId="loginBackground" />
+            <LoginBackground configId="loginBackground" imageUrl={eventData?.backgroundImageUrl} />
         </Suspense>
         
         <div className="absolute top-6 left-6">
@@ -100,7 +107,7 @@ export default function JuryPanelLoginPage() {
         <Card className="w-full max-w-md shadow-2xl">
             <CardHeader className="text-center">
                  <h2 className="text-2xl font-bold tracking-tight">Jury Panel Login</h2>
-                <p className="text-muted-foreground">Select your panel and enter the password to continue.</p>
+                <p className="text-muted-foreground">{eventData?.name || 'Select your panel and enter the password to continue.'}</p>
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleLogin} className="space-y-4">
