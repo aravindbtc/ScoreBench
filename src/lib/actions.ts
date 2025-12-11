@@ -1,9 +1,9 @@
 
 'use server';
 
-import { doc, collection, getDocs, writeBatch, query, where } from 'firebase-admin/firestore';
 import { getAdminApp } from './firebase-admin';
 import type { Jury } from './types';
+import { query, where } from 'firebase-admin/firestore';
 
 
 export async function verifyAdminPassword(password: string) {
@@ -20,9 +20,9 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
     try {
         const db = getAdminApp().firestore();
         const panelNumber = parseInt(panelNo, 10);
-        const juriesCollectionRef = collection(db, `events/${eventId}/juries`);
+        const juriesCollectionRef = db.collection(`events/${eventId}/juries`);
         const q = query(juriesCollectionRef, where('panelNo', '==', panelNumber));
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await q.get();
 
         if (querySnapshot.empty) {
             return { success: false, message: 'Invalid panel selected for this event.' };
@@ -50,28 +50,38 @@ export async function deleteEvent(eventId: string) {
     }
 
     try {
-        const db = getAdminApp().firestore();
-        const eventRef = doc(db, 'events', eventId);
-        const batch = writeBatch(db);
+        console.log(`[SERVER ACTION] Initializing Admin App for event deletion: ${eventId}`);
+        const adminApp = getAdminApp();
+        const db = adminApp.firestore();
+        const eventRef = db.doc(`events/${eventId}`);
 
+        console.log(`[SERVER ACTION] Attempting to delete event document at path: ${eventRef.path}`);
+        
+        // Temporarily simplify to only delete the main document to isolate the issue.
+        await eventRef.delete();
+
+        /*
+        // Original subcollection deletion logic (commented out for debugging)
+        const batch = db.batch();
         const subcollections = ['teams', 'scores', 'juries', 'evaluationCriteria'];
         for (const sub of subcollections) {
-            const subcollectionRef = collection(eventRef, sub);
-            const snapshot = await getDocs(subcollectionRef);
+            const subcollectionRef = db.collection(`events/${eventId}/${sub}`);
+            const snapshot = await subcollectionRef.get();
             snapshot.docs.forEach(doc => {
                 batch.delete(doc.ref);
             });
         }
         
         batch.delete(eventRef);
-
         await batch.commit();
+        */
 
+        console.log(`[SERVER ACTION] Successfully deleted event document: ${eventId}`);
         return { success: true };
 
     } catch (error) {
-        console.error(`Failed to delete event ${eventId}:`, error);
+        console.error(`[SERVER ACTION] FAILED to delete event ${eventId}. Full error:`, error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
-        return { success: false, message: `An unexpected error occurred while deleting the event: ${errorMessage}` };
+        return { success: false, message: `Deletion failed: ${errorMessage}` };
     }
 }
