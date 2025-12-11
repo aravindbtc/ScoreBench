@@ -3,7 +3,7 @@
 
 import { getAdminApp } from './firebase-admin';
 import type { Jury } from './types';
-import { query, where } from 'firebase-admin/firestore';
+import { CollectionReference, Query, WriteBatch } from 'firebase-admin/firestore';
 
 
 export async function verifyAdminPassword(password: string) {
@@ -22,7 +22,7 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
         const db = adminApp.firestore();
         const panelNumber = parseInt(panelNo, 10);
         const juriesCollectionRef = db.collection(`events/${eventId}/juries`);
-        const q = query(juriesCollectionRef, where('panelNo', '==', panelNumber));
+        const q = juriesCollectionRef.where('panelNo', '==', panelNumber);
         const querySnapshot = await q.get();
 
         if (querySnapshot.empty) {
@@ -44,38 +44,48 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
 }
 
 
-export async function deleteEvent(eventId: string) {
+async function deleteCollection(collectionRef: CollectionReference | Query, batch: WriteBatch): Promise<void> {
+    const snapshot = await collectionRef.get();
+    if (snapshot.size === 0) {
+        return;
+    }
+
+    snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+}
+
+export async function deleteEvent(eventId: string): Promise<{ success: boolean, message?: string }> {
     'use server';
     if (!eventId) {
         return { success: false, message: 'Event ID is required.' };
     }
 
     try {
-        console.log(`[SERVER ACTION] Initializing Admin App for event deletion: ${eventId}`);
+        console.log(`[SERVER ACTION] Deleting event: ${eventId}`);
         const adminApp = getAdminApp();
         const db = adminApp.firestore();
+        
         const eventRef = db.doc(`events/${eventId}`);
+        const batch = db.batch();
 
-        console.log(`[SERVER ACTION] Deleting subcollections for event: ${eventId}`);
-        
-        // Delete subcollections first
+        // Target all subcollections for deletion
         const subcollections = ['teams', 'scores', 'juries', 'evaluationCriteria'];
-        for (const sub of subcollections) {
-            const subcollectionRef = db.collection(eventRef.path).doc(eventId).collection(sub);
-            const snapshot = await subcollectionRef.get();
-            if (snapshot.size > 0) {
-                const batch = db.batch();
-                snapshot.docs.forEach(doc => {
-                    batch.delete(doc.ref);
-                });
-                await batch.commit();
-            }
+        for (const subcollection of subcollections) {
+            const collectionPath = `${eventRef.path}/${subcollection}`;
+            console.log(`[SERVER ACTION] Deleting subcollection: ${collectionPath}`);
+            const subcollectionRef = db.collection(collectionPath);
+            await deleteCollection(subcollectionRef, batch);
         }
-        
-        console.log(`[SERVER ACTION] Deleting main event document: ${eventRef.path}`);
-        await eventRef.delete();
 
-        console.log(`[SERVER ACTION] Successfully deleted event: ${eventId}`);
+        // Delete the main event document
+        console.log(`[SERVER ACTION] Deleting main event document: ${eventRef.path}`);
+        batch.delete(eventRef);
+
+        // Commit the batch
+        await batch.commit();
+
+        console.log(`[SERVER ACTION] Successfully deleted event and all subcollections: ${eventId}`);
         return { success: true };
 
     } catch (error) {
