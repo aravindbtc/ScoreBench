@@ -1,3 +1,4 @@
+
 'use server';
 
 import { initializeApp, getApps, getApp, cert, App, applicationDefault } from 'firebase-admin/app';
@@ -97,11 +98,11 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean, 
         console.error(`[SERVER_ACTION] FAILED to delete event ${eventId}. Full error:`, error);
         
         let errorMessage = 'An unknown server error occurred.';
-        if (error instanceof SyntaxError || error.message.includes('JSON')) {
+        if (error instanceof SyntaxError || (error.message && error.message.includes('JSON'))) {
              errorMessage = 'The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.';
-        } else if (error.code === 'permission-denied' || error.message.includes('permission')) {
+        } else if (error.code === 'permission-denied' || (error.message && error.message.includes('permission'))) {
             errorMessage = 'Permission denied. The server does not have the required permissions to delete this data.';
-        } else {
+        } else if (error.message) {
             errorMessage = error.message;
         }
 
