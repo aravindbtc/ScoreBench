@@ -13,26 +13,25 @@ function getAdminApp(): App {
         return getApp();
     }
 
-    // Check if the service account environment variable is available.
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+    
+    if (serviceAccountEnv) {
+        let serviceAccount;
         try {
-            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-            return initializeApp({
-                credential: cert(serviceAccount),
-            });
+            serviceAccount = JSON.parse(serviceAccountEnv);
         } catch (e: any) {
-            // This is the critical error check. If JSON.parse fails, it's a SyntaxError.
             if (e instanceof SyntaxError) {
                 console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string.');
-                // Re-throw a more specific error to be caught by the server action.
-                throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON. Ensure it is a single-line, escaped string.');
+                throw new Error('The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
             }
-            console.error('Error initializing with service account. Falling back to default credentials.', e);
-            // Fall through to default credentials if there's another type of error.
+            throw e; // Re-throw other errors
         }
+        
+        return initializeApp({
+            credential: cert(serviceAccount),
+        });
     } 
     
-    // Fallback for local development or environments with gcloud CLI configured.
     console.log("Initializing Firebase Admin with Application Default Credentials.");
     return initializeApp({
         credential: applicationDefault(),
@@ -81,8 +80,6 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
 export async function deleteEvent(eventId: string): Promise<{ success: boolean; message: string }> {
     'use server';
 
-    console.log("SERVICE ACCOUNT RAW:", process.env.FIREBASE_SERVICE_ACCOUNT);
-
     if (!eventId) {
         return { success: false, message: 'Event ID is required.' };
     }
@@ -93,25 +90,21 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
         
         const eventRef = db.doc(`events/${eventId}`);
         
-        console.log(`[SERVER_ACTION] Starting recursive delete for document: ${eventRef.path}`);
         await db.recursiveDelete(eventRef);
 
-        console.log(`[SERVER_ACTION] Successfully deleted event and all subcollections: ${eventId}`);
         return { success: true, message: "Event deleted successfully." };
 
     } catch (error: any) {
-        console.error(`[SERVER_ACTION] FAILED to delete event ${eventId}. Full error:`, error);
+        console.error(`[SERVER_ACTION_ERROR] Failed to delete event ${eventId}:`, error);
         
-        let errorMessage = 'An unknown server error occurred.';
-         if (error.message) {
+        // Default error message
+        let errorMessage = 'An unknown server error occurred during deletion.';
+        
+        // Provide more specific feedback if possible
+        if (error.message) {
             errorMessage = error.message;
         }
         
-        if (error instanceof SyntaxError) {
-            errorMessage = 'The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.';
-        }
-
-
         return { success: false, message: `Deletion failed: ${errorMessage}` };
     }
 }

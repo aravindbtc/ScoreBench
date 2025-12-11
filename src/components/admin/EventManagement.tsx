@@ -184,7 +184,6 @@ export function EventManagement() {
     const { data: events, isLoading } = useCollection<Event>(eventsQuery);
     const [displayEvents, setDisplayEvents] = useState<Event[]>([]);
 
-    const [isCreatingDefault, setIsCreatingDefault] = useState(true);
     const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -228,34 +227,7 @@ export function EventManagement() {
         setEventToDelete(null);
     }
 
-    useEffect(() => {
-        const setupDefaultEvent = async () => {
-            if (!isLoading && events && events.length === 0) {
-                try {
-                    await addDoc(collection(firestore, 'events'), {
-                        name: 'Unnamed Event',
-                        createdAt: serverTimestamp(),
-                    });
-                    toast({
-                        title: 'Default Event Created',
-                        description: 'Your first event "Unnamed Event" is ready. Select it to start managing your competition.',
-                    });
-                } catch (error) {
-                    console.error("Error creating default event:", error);
-                    toast({ title: 'Error', description: 'Could not create the default event.', variant: 'destructive'});
-                } finally {
-                    setIsCreatingDefault(false);
-                }
-            } else if (!isLoading) {
-                setIsCreatingDefault(false);
-            }
-        };
-
-        setupDefaultEvent();
-    }, [isLoading, events, firestore, toast]);
-
-
-    const showLoadingState = isLoading || isCreatingDefault;
+    const showLoadingState = isLoading;
 
     return (
         <div className="space-y-6">
