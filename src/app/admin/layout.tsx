@@ -17,8 +17,9 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   // The Events page is always visible.
-  // The other management links are only visible if an event is selected.
-  const showManagementLinks = !!eventId;
+  // The other management links are only visible if an event is selected
+  // and we are NOT on the events page itself.
+  const showManagementLinks = !!eventId && pathname !== '/admin/events';
 
   const navItems = (
     <>
@@ -65,12 +66,14 @@ export default function AdminLayout({
             </div>
         </AppHeader>
         <div className="flex">
-          <aside className="w-64 flex-shrink-0 border-r p-4 hidden md:block">
-            <nav className="flex flex-col space-y-2">
-              <h3 className="px-4 text-lg font-semibold tracking-tight">Admin Menu</h3>
-              {navItems}
-            </nav>
-          </aside>
+          {showManagementLinks && (
+             <aside className="w-64 flex-shrink-0 border-r p-4 hidden md:block">
+              <nav className="flex flex-col space-y-2">
+                <h3 className="px-4 text-lg font-semibold tracking-tight">Admin Menu</h3>
+                {navItems}
+              </nav>
+            </aside>
+          )}
           <main className="flex-1 p-4 sm:p-8">{children}</main>
         </div>
       </div>
