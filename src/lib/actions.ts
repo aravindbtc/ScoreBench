@@ -1,7 +1,7 @@
 
 'use server';
 
-import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
+import { initializeApp, getApps, getApp, cert, App, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
 import { firebaseConfig } from '@/firebase/config';
@@ -18,25 +18,26 @@ function getAdminApp() {
     try {
         if (process.env.FIREBASE_SERVICE_ACCOUNT) {
             serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+             return initializeApp({
+                credential: cert(serviceAccount),
+                databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+            });
         } else {
             // This is a fallback for local development or environments
             // where application default credentials should be used.
             console.warn("FIREBASE_SERVICE_ACCOUNT env var not set. Falling back to default credentials. This is expected for local development.");
              return initializeApp({
+                credential: applicationDefault(),
                 databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
             });
         }
     } catch (e) {
-        console.error('Error parsing FIREBASE_SERVICE_ACCOUNT. Falling back to default credentials.', e);
+        console.error('Error initializing Firebase Admin SDK. Falling back to default credentials.', e);
         return initializeApp({
+            credential: applicationDefault(),
             databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
         });
     }
-    
-    return initializeApp({
-        credential: cert(serviceAccount),
-        databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
-    });
 }
 
 
