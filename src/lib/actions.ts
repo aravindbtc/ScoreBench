@@ -1,9 +1,8 @@
 
 'use server';
 
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, doc, collection, getDocs, writeBatch } from 'firebase-admin/firestore';
 import { getAdminApp } from './firebase-admin';
-import { collection, getDocs, query, where, doc, writeBatch } from 'firebase/firestore';
 import type { Jury } from './types';
 
 
@@ -21,8 +20,8 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
     try {
         const db = getFirestore(getAdminApp());
         const panelNumber = parseInt(panelNo, 10);
-        const juriesCollection = collection(db, `events/${eventId}/juries`);
-        const q = query(juriesCollection, where('panelNo', '==', panelNumber));
+        const juriesCollectionRef = collection(db, `events/${eventId}/juries`);
+        const q = query(juriesCollectionRef, where('panelNo', '==', panelNumber));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
@@ -51,7 +50,8 @@ export async function deleteEvent(eventId: string) {
     }
 
     try {
-        const db = getFirestore(getAdminApp());
+        const adminApp = getAdminApp();
+        const db = getFirestore(adminApp);
         const eventRef = doc(db, 'events', eventId);
         const batch = writeBatch(db);
 
