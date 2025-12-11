@@ -1,8 +1,8 @@
 
 'use server';
 
-import { db as adminDb } from './firebase-admin';
-import { collection, getDocs, query, where, doc, writeBatch, getDoc, deleteDoc } from 'firebase/firestore';
+import { db } from './firebase-admin';
+import { collection, getDocs, query, where, doc, writeBatch } from 'firebase/firestore';
 import type { Jury } from './types';
 
 
@@ -20,7 +20,7 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
     try {
         const panelNumber = parseInt(panelNo, 10);
         // Use the admin DB for server-side validation
-        const juriesCollection = collection(adminDb, `events/${eventId}/juries`);
+        const juriesCollection = collection(db, `events/${eventId}/juries`);
         const q = query(juriesCollection, where('panelNo', '==', panelNumber));
         const querySnapshot = await getDocs(q);
 
@@ -50,8 +50,8 @@ export async function deleteEvent(eventId: string) {
     }
 
     try {
-        const eventRef = doc(adminDb, 'events', eventId);
-        const batch = writeBatch(adminDb);
+        const eventRef = doc(db, 'events', eventId);
+        const batch = writeBatch(db);
 
         // Delete subcollections
         const subcollections = ['teams', 'scores', 'juries', 'evaluationCriteria'];

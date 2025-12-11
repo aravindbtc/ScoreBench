@@ -1,5 +1,7 @@
 
-import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
+'use server';
+
+import { initializeApp, getApps, getApp, cert, App, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
@@ -12,16 +14,34 @@ function getAdminApp(): App {
   if (getApps().length > 0) {
     return getApp();
   }
-  
-  const credential = cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT!));
 
-  return initializeApp({
-    credential,
-    databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
-  });
+  // Check if the service account environment variable is available.
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const credential = cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
+    return initializeApp({
+      credential,
+      databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+    });
+  } else {
+    // If not available (e.g., local development without the variable set),
+    // use Application Default Credentials. This is a robust fallback.
+    return initializeApp({
+        credential: applicationDefault(),
+        databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+    });
+  }
 }
 
-const app: App = getAdminApp();
-const db: Firestore = getFirestore(app);
+let db: Firestore;
 
-export { app, db };
+try {
+    const app: App = getAdminApp();
+    db = getFirestore(app);
+} catch (e) {
+    console.error("Firebase Admin SDK initialization failed:", e);
+    // Create a mock db object to avoid crashing the app if initialization fails
+    db = {} as Firestore;
+}
+
+
+export { db };
