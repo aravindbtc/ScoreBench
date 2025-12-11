@@ -5,7 +5,7 @@ import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
 
-// This function initializes the admin app, but only if it hasn't been initialized already
+// This function initializes the admin app, but only if it has been initialized already
 // in the current server instance. This is a robust pattern for serverless environments.
 function getAdminApp(): App {
     if (getApps().length > 0) {
@@ -76,11 +76,7 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
 export async function deleteEvent(eventId: string): Promise<{ success: boolean; message: string }> {
     'use server';
 
-    // --- DEBUGGING STEP ---
-    // This will print the raw environment variable to your server console.
     console.log("SERVICE ACCOUNT RAW:", process.env.FIREBASE_SERVICE_ACCOUNT);
-    // --- END DEBUGGING STEP ---
-
 
     if (!eventId) {
         return { success: false, message: 'Event ID is required.' };
@@ -102,11 +98,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
         console.error(`[SERVER_ACTION] FAILED to delete event ${eventId}. Full error:`, error);
         
         let errorMessage = 'An unknown server error occurred.';
-         if (error instanceof SyntaxError || (error.message && error.message.includes('JSON'))) {
-             errorMessage = 'The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.';
-        } else if (error.code === 'permission-denied' || (error.message && error.message.includes('permission'))) {
-            errorMessage = 'Permission denied. This usually means the Firebase Admin credentials are not set up correctly.';
-        } else if (error.message) {
+         if (error.message) {
             errorMessage = error.message;
         }
 
