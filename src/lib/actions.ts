@@ -28,13 +28,20 @@ function getAdminApp(): App {
 
     let serviceAccount;
     try {
-        // This is the critical fix: Replace literal \n with escaped \\n in the private key.
-        const correctedServiceAccountString = serviceAccountEnv.replace(/\\n/g, '\\\\n');
-        serviceAccount = JSON.parse(correctedServiceAccountString);
+        serviceAccount = JSON.parse(serviceAccountEnv);
+        // This is the critical fix: Replace escaped \\n with literal \n for the private key.
+        if (serviceAccount.private_key) {
+            serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        }
     } catch (e: any) {
         if (e instanceof SyntaxError) {
-            console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string, or the private key formatting is incorrect.', e);
+            console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string.', e);
             throw new Error('The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
+        }
+         // This specifically catches the "Invalid PEM" error and provides a clearer message.
+        if (e.message.includes('PEM')) {
+            console.error('CRITICAL: Failed to parse private key. The format is invalid.', e);
+            throw new Error(`Failed to parse private key: ${e.message}`);
         }
         throw e; // Re-throw other errors
     }
