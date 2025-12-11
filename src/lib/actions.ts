@@ -4,7 +4,6 @@
 import { initializeApp, getApps, getApp, cert, App, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
-import { firebaseConfig } from '@/firebase/config';
 
 // This function initializes the admin app, but only if it hasn't been initialized already
 // in the current server instance. This is a robust pattern for serverless environments.
@@ -19,7 +18,6 @@ function getAdminApp(): App {
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
             return initializeApp({
                 credential: cert(serviceAccount),
-                databaseURL: `https://<PROJECT_ID>.firebaseio.com`
             });
         } catch (e: any) {
             // This is the critical error check. If JSON.parse fails, it's a SyntaxError.
@@ -36,7 +34,6 @@ function getAdminApp(): App {
     // If the service account env var is not set, use Application Default Credentials.
     return initializeApp({
         credential: applicationDefault(),
-        databaseURL: `https://<PROJECT_ID>.firebaseio.com`
     });
 }
 
