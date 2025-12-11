@@ -19,19 +19,24 @@ function getAdminApp(): App {
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
             return initializeApp({
                 credential: cert(serviceAccount),
-                databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+                databaseURL: `https://<PROJECT_ID>.firebaseio.com`
             });
-        } catch (e) {
-            console.error('Error parsing FIREBASE_SERVICE_ACCOUNT. Falling back to default credentials.', e);
-            // Fall through to default credentials if parsing fails
+        } catch (e: any) {
+            // This is the critical error check. If JSON.parse fails, it's a SyntaxError.
+            if (e instanceof SyntaxError) {
+                console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string.');
+                // Re-throw a more specific error to be caught by the server action.
+                throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON. Ensure it is a single-line, escaped string.');
+            }
+            console.error('Error initializing with service account. Falling back to default credentials.', e);
+            // Fall through to default credentials if there's another type of error.
         }
     } 
     
-    // If not available or parsing failed, use Application Default Credentials.
-    // This is a robust fallback for local development or properly configured cloud environments.
+    // If the service account env var is not set, use Application Default Credentials.
     return initializeApp({
         credential: applicationDefault(),
-        databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+        databaseURL: `https://<PROJECT_ID>.firebaseio.com`
     });
 }
 
@@ -81,14 +86,12 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean, 
     }
 
     try {
-        console.log(`[SERVER_ACTION] Initializing Admin SDK to delete event: ${eventId}`);
         const adminApp = getAdminApp();
         const db = getFirestore(adminApp);
         
         const eventRef = db.doc(`events/${eventId}`);
         
         console.log(`[SERVER_ACTION] Starting recursive delete for document: ${eventRef.path}`);
-        
         await db.recursiveDelete(eventRef);
 
         console.log(`[SERVER_ACTION] Successfully deleted event and all subcollections: ${eventId}`);
@@ -96,8 +99,16 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean, 
 
     } catch (error: any) {
         console.error(`[SERVER_ACTION] FAILED to delete event ${eventId}. Full error:`, error);
-        // Return the specific error message for debugging on the client.
-        return { success: false, message: `Deletion failed: ${error.message || 'An unknown server error occurred.'}` };
+        
+        let errorMessage = 'An unknown server error occurred.';
+        if (error.message.includes('FIREBASE_SERVICE_ACCOUNT is not valid JSON')) {
+            errorMessage = 'The FIREBASE_SERVICE_ACCOUNT environment variable is not valid. Please ensure it is a single-line, escaped JSON string.';
+        } else if (error.message.includes('permission-denied') || error.message.includes('permissions')) {
+            errorMessage = 'Permission denied. The server does not have the required permissions to delete this data.';
+        } else {
+            errorMessage = error.message;
+        }
+
+        return { success: false, message: `Deletion failed: ${errorMessage}` };
     }
 }
-
