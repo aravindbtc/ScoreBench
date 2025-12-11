@@ -25,17 +25,17 @@ function getAdminApp() {
         } else {
             // This is a fallback for local development or environments
             // where application default credentials should be used.
-            console.warn("FIREBASE_SERVICE_ACCOUNT env var not set. Falling back to default credentials. This is expected for local development.");
+            console.warn("[ADMIN_SDK] FIREBASE_SERVICE_ACCOUNT env var not set. Falling back to default credentials.");
              return initializeApp({
                 credential: applicationDefault(),
                 databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
             });
         }
     } catch (e) {
-        console.error('Error initializing Firebase Admin SDK. Falling back to default credentials.', e);
+        console.error('[ADMIN_SDK] Error initializing Firebase Admin SDK. Falling back to default credentials.', e);
         return initializeApp({
             credential: applicationDefault(),
-            databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+            databaseURL: `https://{firebaseConfig.projectId}.firebaseio.com`
         });
     }
 }
@@ -73,8 +73,9 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
             return { success: false, message: 'Incorrect password for the selected panel.' };
         }
     } catch (error) {
-        console.error("Jury password verification failed:", error);
-        return { success: false, message: 'An unexpected error occurred during login.' };
+        console.error("[JURY_AUTH_ERROR]", error);
+        const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
+        return { success: false, message: `An unexpected error occurred during login: ${errorMessage}` };
     }
 }
 
@@ -86,24 +87,22 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean, 
     }
 
     try {
-        console.log(`[SERVER ACTION] Initializing Admin SDK to delete event: ${eventId}`);
+        console.log(`[SERVER_ACTION] Initializing Admin SDK to delete event: ${eventId}`);
         const adminApp = getAdminApp();
         const db = getFirestore(adminApp);
         
         const eventRef = db.doc(`events/${eventId}`);
         
-        console.log(`[SERVER ACTION] Starting recursive delete for document: ${eventRef.path}`);
+        console.log(`[SERVER_ACTION] Starting recursive delete for document: ${eventRef.path}`);
         
-        // Use the built-in recursiveDelete method.
-        // This is the most efficient and reliable way to delete a document and all its subcollections.
         await db.recursiveDelete(eventRef);
 
-        console.log(`[SERVER ACTION] Successfully deleted event and all subcollections: ${eventId}`);
+        console.log(`[SERVER_ACTION] Successfully deleted event and all subcollections: ${eventId}`);
         return { success: true };
 
-    } catch (error) {
-        console.error(`[SERVER ACTION] FAILED to delete event ${eventId}. Full error:`, error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
-        return { success: false, message: `Deletion failed: ${errorMessage}` };
+    } catch (error: any) {
+        console.error(`[SERVER_ACTION] FAILED to delete event ${eventId}. Full error:`, error);
+        // Return the specific error message for debugging on the client.
+        return { success: false, message: `Deletion failed: ${error.message || 'An unknown server error occurred.'}` };
     }
 }

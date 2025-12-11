@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -207,7 +208,7 @@ export function EventManagement() {
         if (result.success) {
             toast({
                 title: 'Event Deleted',
-                description: `"${eventToDelete.name}" and all its data have been permanently removed.`,
+                description: `"${eventToDelete.name}" has been permanently removed.`,
             });
             // Update client-side state immediately
             setDisplayEvents(prevEvents => prevEvents.filter(e => e.id !== eventToDelete.id));
