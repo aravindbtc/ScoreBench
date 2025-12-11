@@ -1,9 +1,10 @@
 
 'use server';
 
-import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
+import { initializeApp, getApps, getApp, cert, App, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { Jury } from './types';
+
 
 // This function initializes the admin app, but only if it has been initialized already
 // in the current server instance. This is a robust pattern for serverless environments.
@@ -31,7 +32,11 @@ function getAdminApp(): App {
         }
     } 
     
-    throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set.');
+    // Fallback for local development or environments with gcloud CLI configured.
+    console.log("Initializing Firebase Admin with Application Default Credentials.");
+    return initializeApp({
+        credential: applicationDefault(),
+    });
 }
 
 
@@ -101,6 +106,11 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
          if (error.message) {
             errorMessage = error.message;
         }
+        
+        if (error instanceof SyntaxError) {
+            errorMessage = 'The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.';
+        }
+
 
         return { success: false, message: `Deletion failed: ${errorMessage}` };
     }

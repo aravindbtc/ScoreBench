@@ -219,7 +219,8 @@ export function EventManagement() {
             toast({
                 title: 'Deletion Failed',
                 description: result.message,
-                variant: 'destructive'
+                variant: 'destructive',
+                duration: 10000,
             });
         }
 
