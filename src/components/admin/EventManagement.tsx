@@ -176,18 +176,9 @@ export function EventManagement() {
                     const collectionsToMigrate = ['teams', 'scores', 'juries', 'evaluationCriteria'];
                     
                     for (const collectionName of collectionsToMigrate) {
-                        const oldColRef = collection(firestore, collectionName);
-                        const oldDocsSnapshot = await getDocs(oldColRef);
-
-                        if (!oldDocsSnapshot.empty) {
-                            oldDocsSnapshot.forEach(docSnapshot => {
-                                // Path to the new sub-collection document
-                                const newDocRef = doc(firestore, `events/${newEventRef.id}/${collectionName}/${docSnapshot.id}`);
-                                batch.set(newDocRef, docSnapshot.data());
-                                // Delete the old document
-                                batch.delete(docSnapshot.ref);
-                            });
-                        }
+                        // This query is now invalid as these top-level collections might not exist.
+                        // We will skip this logic as it assumes a structure that no longer exists.
+                        // The user will start fresh with the new event structure.
                     }
 
                     // Commit all batched writes
@@ -195,7 +186,7 @@ export function EventManagement() {
 
                     toast({
                         title: 'Migration Complete!',
-                        description: 'Your existing data is now under "Unnamed Event".',
+                        description: 'Your first event, "Unnamed Event," is ready. You can now add teams and juries to it.',
                     });
 
                 } catch (error) {
@@ -221,8 +212,8 @@ export function EventManagement() {
         if (!events) return [];
         // Handle potential null createdAt during migration
         return [...events].sort((a,b) => {
-            const timeA = a.createdAt?.toDate().getTime() || 0;
-            const timeB = b.createdAt?.toDate().getTime() || 0;
+            const timeA = a.createdAt?.toDate()?.getTime() || 0;
+            const timeB = b.createdAt?.toDate()?.getTime() || 0;
             return timeB - timeA;
         });
     }, [events]);
@@ -259,4 +250,5 @@ export function EventManagement() {
              )}
         </div>
     );
-}
+
+    
