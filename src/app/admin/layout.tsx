@@ -1,41 +1,56 @@
+'use client';
 
 import { AdminAuth } from '@/components/auth/AdminAuth';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { NavLink } from '@/components/layout/NavLink';
 import { BarChart, Image, Upload, ListChecks, Settings, Home } from 'lucide-react';
 import { AdminMobileNav } from '@/components/admin/AdminMobileNav';
+import { useEvent } from '@/hooks/use-event';
+import { usePathname } from 'next/navigation';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { eventId } = useEvent();
+  const pathname = usePathname();
+
+  // The Events page is always visible.
+  // The other links are only visible if an event is selected or if we are on the events page itself
+  // to prevent layout shifts when navigating from event selection to the dashboard.
+  const showManagementLinks = eventId || pathname === '/admin/events';
+
   const navItems = (
     <>
         <NavLink href="/admin/events">
             <Home className="mr-2 h-4 w-4" />
             Events
         </NavLink>
-        <NavLink href="/admin">
-            <BarChart className="mr-2 h-4 w-4" />
-            Dashboard
-        </NavLink>
-        <NavLink href="/admin/upload">
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Teams
-        </NavLink>
-        <NavLink href="/admin/criteria">
-            <ListChecks className="mr-2 h-4 w-4" />
-            Manage Criteria
-        </NavLink>
-        <NavLink href="/admin/upload-image">
-            <Image className="mr-2 h-4 w-4" />
-            Customize Login
-        </NavLink>
-        <NavLink href="/admin/settings">
-            <Settings className="mr-2 h-4 w-4" />
-            App Settings
-        </NavLink>
+        {showManagementLinks && (
+          <>
+            <NavLink href="/admin">
+                <BarChart className="mr-2 h-4 w-4" />
+                Dashboard
+            </NavLink>
+            <NavLink href="/admin/upload">
+                <Upload className="mr-2 h-4 w-4" />
+                Upload Teams
+            </NavLink>
+            <NavLink href="/admin/criteria">
+                <ListChecks className="mr-2 h-4 w-4" />
+                Manage Criteria
+            </NavLink>
+            <NavLink href="/admin/upload-image">
+                <Image className="mr-2 h-4 w-4" />
+                Customize Login
+            </NavLink>
+            <NavLink href="/admin/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                App Settings
+            </NavLink>
+          </>
+        )}
     </>
   );
 
