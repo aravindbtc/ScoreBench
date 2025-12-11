@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -37,6 +36,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 function CreateEventDialog({ onEventCreated }: { onEventCreated: () => void }) {
     const [eventName, setEventName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
     const firestore = useFirestore();
     const { toast } = useToast();
 
@@ -53,6 +53,7 @@ function CreateEventDialog({ onEventCreated }: { onEventCreated: () => void }) {
             });
             toast({ title: 'Event Created', description: `"${eventName}" has been created.`});
             setEventName('');
+            setIsOpen(false);
             onEventCreated();
         } catch (error) {
             console.error("Error creating event:", error);
@@ -63,7 +64,7 @@ function CreateEventDialog({ onEventCreated }: { onEventCreated: () => void }) {
     };
 
     return (
-        <Dialog onOpenChange={(isOpen) => !isOpen && onEventCreated()}>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                  <Button>
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -177,25 +178,39 @@ export function EventManagement() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const { eventId, setEventId } = useEvent();
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
     
     const eventsQuery = useMemoFirebase(() => collection(firestore, 'events'), [firestore]);
     const { data: events, isLoading } = useCollection<Event>(eventsQuery);
+    const [displayEvents, setDisplayEvents] = useState<Event[]>([]);
 
     const [isCreatingDefault, setIsCreatingDefault] = useState(true);
+    const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    useEffect(() => {
+        if (events) {
+            const sorted = [...events].sort((a, b) => {
+                const timeA = a.createdAt?.toDate?.().getTime() || 0;
+                const timeB = b.createdAt?.toDate?.().getTime() || 0;
+                return timeB - timeA;
+            });
+            setDisplayEvents(sorted);
+        }
+    }, [events]);
 
     const handleDelete = async () => {
         if (!eventToDelete) return;
 
         setIsDeleting(true);
         const result = await deleteEvent(eventToDelete.id);
+
         if (result.success) {
             toast({
                 title: 'Event Deleted',
                 description: `"${eventToDelete.name}" and all its data have been permanently removed.`,
             });
+            // Update client-side state immediately
+            setDisplayEvents(prevEvents => prevEvents.filter(e => e.id !== eventToDelete.id));
             if (eventId === eventToDelete.id) {
                 setEventId(null);
             }
@@ -238,16 +253,6 @@ export function EventManagement() {
     }, [isLoading, events, firestore, toast]);
 
 
-    const sortedEvents = useMemo(() => {
-        if (!events) return [];
-        // Handle potential null createdAt during creation
-        return [...events].sort((a,b) => {
-            const timeA = a.createdAt?.toDate?.().getTime() || 0;
-            const timeB = b.createdAt?.toDate?.().getTime() || 0;
-            return timeB - timeA;
-        });
-    }, [events]);
-
     const showLoadingState = isLoading || isCreatingDefault;
 
     return (
@@ -257,7 +262,7 @@ export function EventManagement() {
                     <h1 className="text-3xl font-bold tracking-tight">Event Management</h1>
                     <p className="text-muted-foreground">Select an event to manage or create a new one.</p>
                 </div>
-                <CreateEventDialog onEventCreated={() => setDialogOpen(false)} />
+                <CreateEventDialog onEventCreated={() => { /* The useCollection hook will update automatically */ }} />
              </div>
              
              {showLoadingState ? (
@@ -265,9 +270,9 @@ export function EventManagement() {
                     <Card><CardContent className="p-4 h-28 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>
                     <Card><CardContent className="p-4 h-28 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>
                 </div>
-             ) : sortedEvents.length > 0 ? (
+             ) : displayEvents.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {sortedEvents.map(event => (
+                    {displayEvents.map(event => (
                         <EventCard key={event.id} event={event} onDeleteRequest={setEventToDelete} />
                     ))}
                 </div>
