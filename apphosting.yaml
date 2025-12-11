@@ -5,3 +5,7 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+  # Set the timeout for server-side functions (like Server Actions).
+  # The default is 10s on Vercel's Hobby plan, which can be too short for
+  # long-running operations like recursive deletion. 60s is a safer value.
+  timeoutSeconds: 60
