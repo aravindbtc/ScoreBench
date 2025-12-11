@@ -1,7 +1,8 @@
 
 'use server';
 
-import { db } from './firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAdminApp } from './firebase-admin';
 import { collection, getDocs, query, where, doc, writeBatch } from 'firebase/firestore';
 import type { Jury } from './types';
 
@@ -15,11 +16,11 @@ export async function verifyAdminPassword(password: string) {
 }
 
 
-export async function verifyJuryPassword(eventId: string, panelNo: string, password: string) {
+export async function verifyJuryPassword(eventId: string, panelNo: string, password:string) {
     'use server';
     try {
+        const db = getFirestore(getAdminApp());
         const panelNumber = parseInt(panelNo, 10);
-        // Use the admin DB for server-side validation
         const juriesCollection = collection(db, `events/${eventId}/juries`);
         const q = query(juriesCollection, where('panelNo', '==', panelNumber));
         const querySnapshot = await getDocs(q);
@@ -50,10 +51,10 @@ export async function deleteEvent(eventId: string) {
     }
 
     try {
+        const db = getFirestore(getAdminApp());
         const eventRef = doc(db, 'events', eventId);
         const batch = writeBatch(db);
 
-        // Delete subcollections
         const subcollections = ['teams', 'scores', 'juries', 'evaluationCriteria'];
         for (const sub of subcollections) {
             const subcollectionRef = collection(eventRef, sub);
@@ -63,7 +64,6 @@ export async function deleteEvent(eventId: string) {
             });
         }
         
-        // After planning to delete subcollections, delete the main event doc
         batch.delete(eventRef);
 
         await batch.commit();
@@ -72,6 +72,7 @@ export async function deleteEvent(eventId: string) {
 
     } catch (error) {
         console.error(`Failed to delete event ${eventId}:`, error);
-        return { success: false, message: 'An unexpected error occurred while deleting the event.' };
+        const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
+        return { success: false, message: `An unexpected error occurred while deleting the event: ${errorMessage}` };
     }
 }
