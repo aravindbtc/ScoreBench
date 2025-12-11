@@ -15,12 +15,13 @@ function getAdminApp(): App {
     if (!serviceAccountEnv) {
          // Fallback for environments like Google Cloud Run where ADC is available.
         try {
+            console.log("Initializing Firebase Admin with Application Default Credentials...");
             return initializeApp({
                 credential: applicationDefault(),
             });
         } catch (e) {
             console.error("CRITICAL: FIREBASE_SERVICE_ACCOUNT is not set and Application Default Credentials are not available.", e);
-            throw new Error('Deletion Failed: Server is not configured with admin credentials. Please set the FIREBASE_SERVICE_ACCOUNT environment variable.');
+            throw new Error('Server is not configured with admin credentials. The FIREBASE_SERVICE_ACCOUNT environment variable is missing.');
         }
     }
 
@@ -30,11 +31,12 @@ function getAdminApp(): App {
     } catch (e: any) {
         if (e instanceof SyntaxError) {
             console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string.');
-            throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
+            throw new Error('The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
         }
         throw e; // Re-throw other errors
     }
     
+    console.log("Initializing Firebase Admin with Service Account...");
     return initializeApp({
         credential: cert(serviceAccount),
     });
@@ -86,7 +88,6 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     }
 
     try {
-        console.log("Attempting to initialize admin app for deletion...");
         const adminApp = getAdminApp();
         const db = getFirestore(adminApp);
         
