@@ -1,3 +1,4 @@
+
 'use client';
 
 import { AdminAuth } from '@/components/auth/AdminAuth';
@@ -13,12 +14,12 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { eventId } = useEvent();
+  const { eventId, isEventLoading } = useEvent();
   const pathname = usePathname();
 
   // The Events page is always visible.
-  // The other links are only visible if an event is selected or if we are on the events page itself
-  // to prevent layout shifts when navigating from event selection to the dashboard.
+  // The other management links are only visible if an event is selected.
+  // Exception: allow showing links on the /admin/events page itself to prevent layout shift upon selection.
   const showManagementLinks = eventId || pathname === '/admin/events';
 
   const navItems = (
@@ -27,7 +28,7 @@ export default function AdminLayout({
             <Home className="mr-2 h-4 w-4" />
             Events
         </NavLink>
-        {showManagementLinks && (
+        {showManagementLinks && eventId && (
           <>
             <NavLink href="/admin">
                 <BarChart className="mr-2 h-4 w-4" />

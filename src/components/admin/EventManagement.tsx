@@ -155,52 +155,35 @@ export function EventManagement() {
 
     useEffect(() => {
         const runMigration = async () => {
-            // Only run migration if events have loaded and there are none
+            // Only run this logic if events have loaded and there are none.
             if (!isLoading && events && events.length === 0) {
-                toast({
+                setIsMigrating(true);
+                 toast({
                     title: 'First-time Setup',
-                    description: 'Migrating existing data to the new multi-event structure. Please wait...',
+                    description: 'Creating your first event container. Please wait...',
                 });
-
                 try {
-                    const batch = writeBatch(firestore);
-
-                    // 1. Create the new "Unnamed Event"
-                    const newEventRef = doc(collection(firestore, 'events'));
-                    batch.set(newEventRef, {
+                    // Create the initial "Unnamed Event"
+                    await addDoc(collection(firestore, 'events'), {
                         name: 'Unnamed Event',
                         createdAt: serverTimestamp(),
                     });
-
-                    // 2. Define old and new collection paths
-                    const collectionsToMigrate = ['teams', 'scores', 'juries', 'evaluationCriteria'];
-                    
-                    for (const collectionName of collectionsToMigrate) {
-                        // This query is now invalid as these top-level collections might not exist.
-                        // We will skip this logic as it assumes a structure that no longer exists.
-                        // The user will start fresh with the new event structure.
-                    }
-
-                    // Commit all batched writes
-                    await batch.commit();
-
-                    toast({
-                        title: 'Migration Complete!',
-                        description: 'Your first event, "Unnamed Event," is ready. You can now add teams and juries to it.',
+                     toast({
+                        title: 'Setup Complete!',
+                        description: 'Your first event "Unnamed Event" is ready. Please re-upload your data to this event.',
                     });
-
                 } catch (error) {
-                    console.error("Migration failed:", error);
+                    console.error("Failed to create initial event:", error);
                     toast({
-                        title: 'Migration Failed',
-                        description: 'Could not migrate existing data. Check the console for details.',
+                        title: 'Setup Failed',
+                        description: 'Could not create the initial event. Check the console.',
                         variant: 'destructive',
                     });
                 } finally {
                     setIsMigrating(false);
                 }
             } else if (!isLoading) {
-                setIsMigrating(false);
+                 setIsMigrating(false);
             }
         };
 
@@ -250,5 +233,4 @@ export function EventManagement() {
              )}
         </div>
     );
-
-    
+}
