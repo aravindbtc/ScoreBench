@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from './firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, writeBatch, getDoc, deleteDoc } from 'firebase/firestore';
 import type { Jury } from './types';
 
 
@@ -38,5 +38,39 @@ export async function verifyJuryPassword(eventId: string, panelNo: string, passw
     } catch (error) {
         console.error("Jury password verification failed:", error);
         return { success: false, message: 'An unexpected error occurred during login.' };
+    }
+}
+
+
+export async function deleteEvent(eventId: string) {
+    'use server';
+    if (!eventId) {
+        return { success: false, message: 'Event ID is required.' };
+    }
+
+    try {
+        const eventRef = doc(db, 'events', eventId);
+        const batch = writeBatch(db);
+
+        // Delete subcollections
+        const subcollections = ['teams', 'scores', 'juries', 'evaluationCriteria'];
+        for (const sub of subcollections) {
+            const subcollectionRef = collection(eventRef, sub);
+            const snapshot = await getDocs(subcollectionRef);
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+        }
+        
+        // After planning to delete subcollections, delete the main event doc
+        batch.delete(eventRef);
+
+        await batch.commit();
+
+        return { success: true };
+
+    } catch (error) {
+        console.error(`Failed to delete event ${eventId}:`, error);
+        return { success: false, message: 'An unexpected error occurred while deleting the event.' };
     }
 }

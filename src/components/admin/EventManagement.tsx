@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -7,7 +8,7 @@ import type { Event } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, PlusCircle, ArrowRight, Edit, Check } from 'lucide-react';
+import { Loader2, PlusCircle, ArrowRight, Edit, Check, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useEvent } from '@/hooks/use-event';
 import { useRouter } from 'next/navigation';
@@ -20,6 +21,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { deleteEvent } from '@/lib/actions';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 function CreateEventDialog({ onEventCreated }: { onEventCreated: () => void }) {
     const [eventName, setEventName] = useState('');
@@ -83,7 +96,7 @@ function CreateEventDialog({ onEventCreated }: { onEventCreated: () => void }) {
     )
 }
 
-function EventCard({ event }: { event: Event }) {
+function EventCard({ event, onDeleteRequest }: { event: Event, onDeleteRequest: (event: Event) => void }) {
     const { setEventId } = useEvent();
     const router = useRouter();
     const [isEditing, setIsEditing] = useState(false);
@@ -118,25 +131,42 @@ function EventCard({ event }: { event: Event }) {
     
     return (
         <Card className="flex flex-col">
-            <CardContent className="p-4 flex items-center justify-between flex-grow">
-                {isEditing ? (
-                    <div className="flex-grow flex items-center gap-2">
-                        <Input value={eventName} onChange={(e) => setEventName(e.target.value)} disabled={isSaving} />
-                        <Button size="icon" onClick={handleSaveName} disabled={isSaving}>
-                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                        </Button>
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-2">
-                         <h3 className="font-semibold">{event.name}</h3>
-                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsEditing(true)}>
-                            <Edit className="h-4 w-4" />
-                        </Button>
-                    </div>
-                )}
-                <Button onClick={handleSelectEvent} variant="secondary">
-                    Manage <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+             <CardContent className="p-4 flex items-center justify-between flex-grow gap-2">
+                <div className="flex-grow min-w-0">
+                    {isEditing ? (
+                        <div className="flex-grow flex items-center gap-2">
+                            <Input value={eventName} onChange={(e) => setEventName(e.target.value)} disabled={isSaving} className="h-9" />
+                            <Button size="icon" className="h-9 w-9" onClick={handleSaveName} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                             <h3 className="font-semibold truncate" title={event.name}>{event.name}</h3>
+                             <Tooltip>
+                                <TooltipTrigger asChild>
+                                     <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => setIsEditing(true)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Edit Name</p></TooltipContent>
+                             </Tooltip>
+                        </div>
+                    )}
+                </div>
+                 <div className="flex-shrink-0 flex items-center gap-1">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive/80 hover:text-destructive" onClick={() => onDeleteRequest(event)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Delete Event</p></TooltipContent>
+                    </Tooltip>
+                    <Button onClick={handleSelectEvent} variant="secondary">
+                        Manage <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                </div>
             </CardContent>
         </Card>
     );
@@ -146,12 +176,40 @@ function EventCard({ event }: { event: Event }) {
 export function EventManagement() {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const { eventId, setEventId } = useEvent();
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     
     const eventsQuery = useMemoFirebase(() => collection(firestore, 'events'), [firestore]);
     const { data: events, isLoading } = useCollection<Event>(eventsQuery);
 
     const [isCreatingDefault, setIsCreatingDefault] = useState(true);
+
+    const handleDelete = async () => {
+        if (!eventToDelete) return;
+
+        setIsDeleting(true);
+        const result = await deleteEvent(eventToDelete.id);
+        if (result.success) {
+            toast({
+                title: 'Event Deleted',
+                description: `"${eventToDelete.name}" and all its data have been permanently removed.`,
+            });
+            if (eventId === eventToDelete.id) {
+                setEventId(null);
+            }
+        } else {
+            toast({
+                title: 'Deletion Failed',
+                description: result.message,
+                variant: 'destructive'
+            });
+        }
+
+        setIsDeleting(false);
+        setEventToDelete(null);
+    }
 
     useEffect(() => {
         const setupDefaultEvent = async () => {
@@ -210,7 +268,7 @@ export function EventManagement() {
              ) : sortedEvents.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {sortedEvents.map(event => (
-                        <EventCard key={event.id} event={event} />
+                        <EventCard key={event.id} event={event} onDeleteRequest={setEventToDelete} />
                     ))}
                 </div>
              ) : (
@@ -221,6 +279,26 @@ export function EventManagement() {
                     </CardHeader>
                 </Card>
              )}
+
+            <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
+                <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the event
+                    <strong className="text-foreground"> "{eventToDelete?.name}" </strong> 
+                    and all associated data, including all teams, scores, juries, and criteria.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Yes, Delete Event
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
