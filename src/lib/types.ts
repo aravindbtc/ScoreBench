@@ -1,4 +1,12 @@
 
+import { Timestamp } from "firebase/firestore";
+
+export interface Event {
+  id: string;
+  name: string;
+  createdAt: Timestamp;
+}
+
 export interface Team {
   id: string;
   teamName: string;
@@ -13,7 +21,6 @@ export interface Jury {
 }
 
 export interface Score {
-  // scores will be a map of criterion keys to numbers, e.g., { innovation: 8, relevance: 9 }
   scores: { [key: string]: number };
   total: number;
   remarks: string;
@@ -42,7 +49,7 @@ export type ImagePlaceholder = {
 };
 
 export interface EvaluationCriterion {
-  id: string;
+  id:string;
   name: string;
   description: string;
   active: boolean;

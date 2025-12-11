@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
-import type { Team, TeamScores, CombinedScoreData, Jury, EvaluationCriterion, AppLabels, Score } from '@/lib/types';
+import type { Team, TeamScores, CombinedScoreData, Jury, EvaluationCriterion, AppLabels, Score, Event } from '@/lib/types';
 import { ScoreTable } from './ScoreTable';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2, PlusCircle, UserPlus, Trash2 } from 'lucide-react';
@@ -27,7 +27,7 @@ import { AddJuryDialog } from './AddJuryDialog';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { TopTeamsBarChart } from './charts/TopTeamsBarChart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
-import { CriteriaManagement } from './CriteriaManagement';
+import { useEvent } from '@/hooks/use-event';
 
 export function AdminDashboard() {
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
@@ -38,6 +38,10 @@ export function AdminDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { eventId, isEventLoading } = useEvent();
+
+  const eventDocRef = useMemoFirebase(() => eventId ? doc(firestore, 'events', eventId) : null, [firestore, eventId]);
+  const { data: eventData } = useDoc<Event>(eventDocRef);
 
   const labelsDocRef = useMemoFirebase(() => doc(firestore, 'appConfig', 'labels'), [firestore]);
   const { data: labelsData, isLoading: labelsLoading } = useDoc<AppLabels>(labelsDocRef);
@@ -48,16 +52,16 @@ export function AdminDashboard() {
   }), [labelsData]);
 
 
-  const teamsQuery = useMemoFirebase(() => collection(firestore, 'teams'), [firestore]);
+  const teamsQuery = useMemoFirebase(() => eventId ? collection(firestore, `events/${eventId}/teams`) : null, [firestore, eventId]);
   const { data: teams, isLoading: teamsLoading } = useCollection<Team>(teamsQuery);
 
-  const scoresQuery = useMemoFirebase(() => collection(firestore, 'scores'), [firestore]);
+  const scoresQuery = useMemoFirebase(() => eventId ? collection(firestore, `events/${eventId}/scores`) : null, [firestore, eventId]);
   const { data: scores, isLoading: scoresLoading } = useCollection<TeamScores>(scoresQuery);
 
-  const juriesQuery = useMemoFirebase(() => collection(firestore, 'juries'), [firestore]);
+  const juriesQuery = useMemoFirebase(() => eventId ? collection(firestore, `events/${eventId}/juries`) : null, [firestore, eventId]);
   const { data: juries, isLoading: juriesLoading } = useCollection<Jury>(juriesQuery);
   
-  const criteriaQuery = useMemoFirebase(() => collection(firestore, 'evaluationCriteria'), [firestore]);
+  const criteriaQuery = useMemoFirebase(() => eventId ? collection(firestore, `events/${eventId}/evaluationCriteria`) : null, [firestore, eventId]);
   const { data: criteria, isLoading: criteriaLoading } = useCollection<EvaluationCriterion>(criteriaQuery);
 
 
@@ -88,12 +92,12 @@ export function AdminDashboard() {
       };
     });
 
-    // Sort by average score in descending order. Teams with no score are placed at the bottom.
     return data.sort((a, b) => (b.scores.avgScore ?? 0) - (a.scores.avgScore ?? 0));
   }, [teams, scores]);
 
   const handleExport = async () => {
-    const criteriaSnapshot = await getDocs(collection(firestore, 'evaluationCriteria'));
+    if (!eventId) return;
+    const criteriaSnapshot = await getDocs(collection(firestore, `events/${eventId}/evaluationCriteria`));
     const allCriteria = criteriaSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as Omit<EvaluationCriterion, 'id'> }));
     
     const dataForExport = combinedData.map(item => {
@@ -127,18 +131,18 @@ export function AdminDashboard() {
   };
 
   const handleDelete = async () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete || !eventId) return;
     setIsDeleting(true);
     
     try {
       const batch = writeBatch(firestore);
       if (itemToDelete.type === 'team') {
-        const teamDocRef = doc(firestore, 'teams', itemToDelete.data.id);
-        const scoreDocRef = doc(firestore, 'scores', itemToDelete.data.id);
+        const teamDocRef = doc(firestore, `events/${eventId}/teams`, itemToDelete.data.id);
+        const scoreDocRef = doc(firestore, `events/${eventId}/scores`, itemToDelete.data.id);
         batch.delete(teamDocRef);
         batch.delete(scoreDocRef);
       } else { // type is 'jury'
-        const juryDocRef = doc(firestore, 'juries', itemToDelete.data.id);
+        const juryDocRef = doc(firestore, `events/${eventId}/juries`, itemToDelete.data.id);
         batch.delete(juryDocRef);
       }
       await batch.commit();
@@ -150,7 +154,6 @@ export function AdminDashboard() {
 
     } catch (error) {
        console.error(`Error deleting ${itemToDelete.type}:`, error);
-       // This will be caught and displayed by the global error handler
     } finally {
       setIsDeleting(false);
       setItemToDelete(null);
@@ -158,20 +161,18 @@ export function AdminDashboard() {
   };
 
   const handleDeleteAllTeams = async () => {
+    if (!eventId || !teamsQuery || !scoresQuery) return;
     setIsDeleting(true);
     try {
         const batch = writeBatch(firestore);
         
-        // Get all teams and scores
-        const teamsSnapshot = await getDocs(teamsQuery!);
-        const scoresSnapshot = await getDocs(scoresQuery!);
+        const teamsSnapshot = await getDocs(teamsQuery);
+        const scoresSnapshot = await getDocs(scoresQuery);
 
-        // Delete all teams
         teamsSnapshot.forEach(doc => {
             batch.delete(doc.ref);
         });
 
-        // Delete all scores
         scoresSnapshot.forEach(doc => {
             batch.delete(doc.ref);
         });
@@ -180,7 +181,7 @@ export function AdminDashboard() {
         
         toast({
             title: 'All Teams Deleted',
-            description: 'All teams and their associated scores have been permanently removed.',
+            description: 'All teams and their associated scores have been permanently removed from this event.',
         });
     } catch (error) {
         console.error('Error deleting all teams:', error);
@@ -195,10 +196,11 @@ export function AdminDashboard() {
     }
 };
 
-  const isLoading = teamsLoading || scoresLoading || juriesLoading || criteriaLoading || labelsLoading;
+  const isLoading = isEventLoading || teamsLoading || scoresLoading || juriesLoading || criteriaLoading || labelsLoading;
 
   return (
     <div className="space-y-4">
+      <h2 className="text-2xl font-semibold text-muted-foreground">Event: <span className="text-foreground">{eventData?.name}</span></h2>
       <Tabs defaultValue="dashboard">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <TabsList>
@@ -309,7 +311,7 @@ export function AdminDashboard() {
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure you want to delete all teams?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This action is irreversible. It will permanently delete <strong className="text-foreground">{teams?.length || 0} teams</strong> and all of their scoring data from the database.
+                    This action is irreversible. It will permanently delete <strong className="text-foreground">{teams?.length || 0} teams</strong> and all of their scoring data from this event.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -324,5 +326,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-
-    

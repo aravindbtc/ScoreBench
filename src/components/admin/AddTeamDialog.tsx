@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { addDocumentNonBlocking, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { useEvent } from '@/hooks/use-event';
 
 const teamSchema = z.object({
   teamName: z.string().min(2, 'Team name must be at least 2 characters.'),
@@ -39,6 +40,7 @@ export function AddTeamDialog({ isOpen, onOpenChange, labels }: AddTeamDialogPro
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { eventId } = useEvent();
 
   const form = useForm<TeamFormData>({
     resolver: zodResolver(teamSchema),
@@ -49,8 +51,13 @@ export function AddTeamDialog({ isOpen, onOpenChange, labels }: AddTeamDialogPro
   });
 
   const onSubmit = (data: TeamFormData) => {
+    if (!eventId) {
+        toast({ title: "Error", description: "No event selected.", variant: "destructive" });
+        return;
+    }
+
     setIsSubmitting(true);
-    const teamsCollection = collection(firestore, 'teams');
+    const teamsCollection = collection(firestore, `events/${eventId}/teams`);
     
     addDocumentNonBlocking(teamsCollection, data);
 

@@ -2,7 +2,7 @@
 import { AdminAuth } from '@/components/auth/AdminAuth';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { NavLink } from '@/components/layout/NavLink';
-import { BarChart, Image, Upload, ListChecks, Settings } from 'lucide-react';
+import { BarChart, Image, Upload, ListChecks, Settings, Home } from 'lucide-react';
 import { AdminMobileNav } from '@/components/admin/AdminMobileNav';
 
 export default function AdminLayout({
@@ -12,6 +12,10 @@ export default function AdminLayout({
 }) {
   const navItems = (
     <>
+        <NavLink href="/admin/events">
+            <Home className="mr-2 h-4 w-4" />
+            Events
+        </NavLink>
         <NavLink href="/admin">
             <BarChart className="mr-2 h-4 w-4" />
             Dashboard

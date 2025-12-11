@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Loader2 } from 'lucide-react';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
+import { useEvent } from '@/hooks/use-event';
 
 const fileSchema = z.object({
   jsonFile: z
@@ -21,10 +22,9 @@ const fileSchema = z.object({
     .refine((files) => files?.[0]?.type === 'application/json', 'Must be a JSON file.'),
 });
 
-// Allow projectName to be an empty string by removing .min(1)
 const teamSchema = z.object({
   teamName: z.string().min(1, 'teamName is required.'),
-  projectName: z.string(), // Removed .min(1) to allow empty strings
+  projectName: z.string(),
 });
 
 const teamsArraySchema = z.array(teamSchema);
@@ -33,12 +33,17 @@ export function TeamUploadForm() {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { eventId } = useEvent();
 
   const form = useForm<{ jsonFile: FileList }>({
     resolver: zodResolver(fileSchema),
   });
 
   const onSubmit = async (data: { jsonFile: FileList }) => {
+    if (!eventId) {
+        toast({ title: "Error", description: "No event selected.", variant: "destructive" });
+        return;
+    }
     setIsUploading(true);
     const file = data.jsonFile[0];
     const reader = new FileReader();
@@ -48,7 +53,6 @@ export function TeamUploadForm() {
         const text = e.target?.result as string;
         const jsonData = JSON.parse(text);
 
-        // **INTELLIGENT PARSING LOGIC**
         let teamsToParse = jsonData;
         if (!Array.isArray(jsonData)) {
           const arrayKey = Object.keys(jsonData).find(key => Array.isArray(jsonData[key]));
@@ -59,8 +63,6 @@ export function TeamUploadForm() {
           }
         }
 
-        // **FLEXIBLE FIELD MAPPING**
-        // Pre-process the array to map different possible key names to our schema.
         const mappedTeams = teamsToParse.map((team: any) => ({
             teamName: team.teamName || team.team_name,
             projectName: team.projectName || team.project_title || team.projectTitle || ''
@@ -79,7 +81,7 @@ export function TeamUploadForm() {
         }
 
         const batch = writeBatch(firestore);
-        const teamsCollection = collection(firestore, 'teams');
+        const teamsCollection = collection(firestore, `events/${eventId}/teams`);
         parsedTeams.forEach((team) => {
           const docRef = doc(teamsCollection);
           batch.set(docRef, team);

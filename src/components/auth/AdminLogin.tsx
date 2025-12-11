@@ -11,6 +11,7 @@ import { verifyAdminPassword } from '@/lib/actions';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signInAnonymously } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { useEvent } from '@/hooks/use-event';
 
 export function AdminLogin() {
   const [password, setPassword] = useState('');
@@ -18,6 +19,8 @@ export function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { setEventId } = useEvent();
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,10 +28,11 @@ export function AdminLogin() {
     const result = await verifyAdminPassword(password);
     if (result.success) {
       try {
-        // Also sign in anonymously to get a UID for Firestore rules
         await signInAnonymously(auth);
         sessionStorage.setItem('admin-auth', 'true');
-        router.push('/admin');
+        // Clear any previously selected event ID when admin logs in
+        setEventId(null);
+        router.push('/admin/events');
       } catch (error) {
          toast({
           title: 'Firebase Login Failed',

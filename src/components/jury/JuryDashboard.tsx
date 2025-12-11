@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { collection, doc } from 'firebase/firestore';
-import type { Team, TeamScores, AppLabels } from '@/lib/types';
+import type { Team, TeamScores, AppLabels, Event } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -12,17 +12,27 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { useEvent } from '@/hooks/use-event';
+import { useRouter } from 'next/navigation';
 
 export function JuryDashboard() {
   const [juryPanel, setJuryPanel] = useState<number | null>(null);
   const firestore = useFirestore();
+  const { eventId, isEventLoading } = useEvent();
+  const router = useRouter();
 
   useEffect(() => {
     const panel = localStorage.getItem('juryPanel');
     if (panel) {
       setJuryPanel(parseInt(panel, 10));
     }
-  }, []);
+    if (!isEventLoading && !eventId) {
+        router.push('/');
+    }
+  }, [eventId, isEventLoading, router]);
+
+  const eventDocRef = useMemoFirebase(() => eventId ? doc(firestore, 'events', eventId) : null, [firestore, eventId]);
+  const { data: eventData, isLoading: eventDocLoading } = useDoc<Event>(eventDocRef);
 
   const labelsDocRef = useMemoFirebase(() => doc(firestore, 'appConfig', 'labels'), [firestore]);
   const { data: labelsData, isLoading: labelsLoading } = useDoc<AppLabels>(labelsDocRef);
@@ -32,8 +42,7 @@ export function JuryDashboard() {
     projectLabel: labelsData?.projectLabel || 'Project Name',
   }), [labelsData]);
 
-
-  const teamsQuery = useMemoFirebase(() => collection(firestore, 'teams'), [firestore]);
+  const teamsQuery = useMemoFirebase(() => eventId ? collection(firestore, `events/${eventId}/teams`) : null, [firestore, eventId]);
   const { data: teams, isLoading: teamsLoading } = useCollection<Team>(teamsQuery);
 
   const sortedTeams = useMemo(() => {
@@ -66,7 +75,7 @@ export function JuryDashboard() {
     return [...teams].sort(naturalSort);
   }, [teams]);
 
-  const scoresQuery = useMemoFirebase(() => collection(firestore, 'scores'), [firestore]);
+  const scoresQuery = useMemoFirebase(() => eventId ? collection(firestore, `events/${eventId}/scores`) : null, [firestore, eventId]);
   const { data: scores, isLoading: scoresLoading } = useCollection<TeamScores>(scoresQuery);
   
   const getTeamStatus = (teamId: string) => {
@@ -78,7 +87,7 @@ export function JuryDashboard() {
     return 'pending';
   };
 
-  const isLoading = teamsLoading || scoresLoading || !juryPanel || labelsLoading;
+  const isLoading = isEventLoading || teamsLoading || scoresLoading || !juryPanel || labelsLoading || eventDocLoading;
 
   if (isLoading) {
     return (
@@ -100,7 +109,7 @@ export function JuryDashboard() {
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Team Evaluation</CardTitle>
+          <CardTitle>Team Evaluation: {eventData?.name}</CardTitle>
           <CardDescription>
             Select a team from the list to submit your scores. You are logged in as Panel {juryPanel}.
           </CardDescription>
@@ -146,7 +155,7 @@ export function JuryDashboard() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center h-24">
-                    No teams have been added yet.
+                    No teams have been added to this event yet.
                   </TableCell>
                 </TableRow>
               )}

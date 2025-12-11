@@ -1,11 +1,26 @@
 
+'use client';
+
 import { TeamUploadForm } from "@/components/admin/TeamUploadForm";
 import { TeamJsonPasteForm } from "@/components/admin/TeamJsonPasteForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TeamAIConverterForm } from "@/components/admin/TeamAIConverterForm";
+import { useEvent } from "@/hooks/use-event";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UploadTeamsPage() {
+  const { eventId, isEventLoading } = useEvent();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isEventLoading && !eventId) {
+      router.push('/admin/events');
+    }
+  }, [eventId, isEventLoading, router]);
+
   const exampleJson = `
 [
   {
@@ -18,6 +33,18 @@ export default function UploadTeamsPage() {
   }
 ]
   `.trim();
+
+  if (isEventLoading || !eventId) {
+    return (
+        <div className="space-y-6">
+            <Skeleton className="h-8 w-1/3" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <Skeleton className="h-[500px] w-full" />
+                <Skeleton className="h-[300px] w-full" />
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

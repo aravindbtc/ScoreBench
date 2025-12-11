@@ -19,7 +19,7 @@ export default function CustomizeLoginPage() {
                 <CardHeader>
                 <CardTitle>Update Login Background</CardTitle>
                 <CardDescription>
-                    You can either upload a new image directly or provide a URL to an existing image. The new background will be reflected on the login page after saving.
+                   Upload a new image to Firebase Storage. The new background will be reflected on the login page after saving. You can also paste an image from your clipboard.
                 </CardDescription>
                 </CardHeader>
                 <CardContent>

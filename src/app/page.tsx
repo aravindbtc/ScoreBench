@@ -11,8 +11,6 @@ import { LoginBackground } from '@/components/auth/LoginBackground';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-// Simplified function to always get the fallback image URL.
-// The actual custom URL will be fetched on the client.
 function getLoginBackgroundUrl() {
   const fallback = PlaceHolderImages.find(img => img.id === 'login-background');
   return fallback?.imageUrl;
@@ -22,12 +20,9 @@ export default function LoginPage() {
   const backgroundImageUrl = getLoginBackgroundUrl();
   const [isClient, setIsClient] = useState(false);
 
-  // This effect runs only on the client, after the component has mounted.
-  // It ensures the Tabs component, which causes hydration issues, is not rendered on the server.
   useEffect(() => {
     setIsClient(true);
   }, []);
-
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
@@ -52,7 +47,7 @@ export default function LoginPage() {
                 <TabsTrigger value="admin">Admin</TabsTrigger>
               </TabsList>
               <TabsContent value="jury" className="mt-6">
-                <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+                <Suspense fallback={<Skeleton className="h-64 w-full" />}>
                   <JuryLogin />
                 </Suspense>
               </TabsContent>

@@ -22,6 +22,7 @@ import { Loader2 } from 'lucide-react';
 import { setDocumentNonBlocking, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Team } from '@/lib/types';
+import { useEvent } from '@/hooks/use-event';
 
 const teamSchema = z.object({
   teamName: z.string().min(2, 'Team name must be at least 2 characters.'),
@@ -41,6 +42,7 @@ export function EditTeamDialog({ team, isOpen, onOpenChange, labels }: EditTeamD
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { eventId } = useEvent();
 
   const form = useForm<TeamFormData>({
     resolver: zodResolver(teamSchema),
@@ -60,10 +62,10 @@ export function EditTeamDialog({ team, isOpen, onOpenChange, labels }: EditTeamD
   }, [team, form]);
 
   const onSubmit = (data: TeamFormData) => {
-    if (!team) return;
+    if (!team || !eventId) return;
 
     setIsSubmitting(true);
-    const teamDocRef = doc(firestore, 'teams', team.id);
+    const teamDocRef = doc(firestore, `events/${eventId}/teams`, team.id);
     
     setDocumentNonBlocking(teamDocRef, data, { merge: true });
 

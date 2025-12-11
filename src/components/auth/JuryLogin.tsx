@@ -15,13 +15,15 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import type { Jury } from '@/lib/types';
+import type { Jury, Event } from '@/lib/types';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { Input } from '../ui/input';
 import { verifyJuryPassword } from '@/lib/actions';
+import { useEvent } from '@/hooks/use-event';
 
 export function JuryLogin() {
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedJury, setSelectedJury] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,31 +32,38 @@ export function JuryLogin() {
   const { toast } = useToast();
   const auth = useAuth();
   const firestore = useFirestore();
+  const { setEventId } = useEvent();
 
-  const juriesQuery = useMemoFirebase(() => collection(firestore, 'juries'), [firestore]);
-  const { data: juries, isLoading: statusIsLoading, error } = useCollection<Jury>(juriesQuery);
-  const status = error ? 'error' : statusIsLoading ? 'loading' : 'success';
+  const eventsQuery = useMemoFirebase(() => collection(firestore, 'events'), [firestore]);
+  const { data: events, isLoading: eventsLoading, error: eventsError } = useCollection<Event>(eventsQuery);
 
+  const juriesQuery = useMemoFirebase(() => {
+    if (!selectedEventId) return null;
+    return query(collection(firestore, `events/${selectedEventId}/juries`));
+  }, [firestore, selectedEventId]);
+  const { data: juries, isLoading: juriesLoading } = useCollection<Jury>(juriesQuery);
+  
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedJury) {
+    if (!selectedEventId || !selectedJury) {
       toast({
         title: 'Selection Required',
-        description: 'Please select your panel to log in.',
+        description: 'Please select your event and panel to log in.',
         variant: 'destructive',
       });
       return;
     }
     setIsLoading(true);
 
-    const result = await verifyJuryPassword(selectedJury, password);
+    const result = await verifyJuryPassword(selectedEventId, selectedJury, password);
 
     if (result.success) {
       try {
         const userCredential = await signInAnonymously(auth);
         if (userCredential.user) {
           localStorage.setItem('juryPanel', selectedJury);
+          setEventId(selectedEventId);
           router.push('/jury');
         }
       } catch (error) {
@@ -76,37 +85,57 @@ export function JuryLogin() {
     }
   };
 
+  const handleEventChange = (eventId: string) => {
+    setSelectedEventId(eventId);
+    setSelectedJury('');
+    setPassword('');
+  }
+
   return (
     <form onSubmit={handleLogin} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="jury-select">Select Panel</Label>
-        {status === 'loading' && <p>Loading panels...</p>}
-        {status === 'success' && juries && juries.length > 0 && (
-           <Select onValueChange={setSelectedJury} value={selectedJury}>
-            <SelectTrigger id="jury-select" className="w-full">
-              <SelectValue placeholder="Select your panel..." />
+        <Label htmlFor="event-select">Select Event</Label>
+        {eventsLoading && <p>Loading events...</p>}
+        {events && events.length > 0 && (
+           <Select onValueChange={handleEventChange} value={selectedEventId || ''}>
+            <SelectTrigger id="event-select" className="w-full">
+              <SelectValue placeholder="Select an event..." />
             </SelectTrigger>
             <SelectContent>
-              {juries.sort((a,b) => a.panelNo - b.panelNo).map((jury) => (
+              {events.sort((a,b) => a.name.localeCompare(b.name)).map((event) => (
+                <SelectItem key={event.id} value={event.id}>
+                  {event.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {events && events.length === 0 && (
+            <div className='text-center text-sm text-muted-foreground p-4 border rounded-md'>
+                <p>No events found.</p>
+            </div>
+        )}
+        {eventsError && (
+             <div className='text-center text-sm text-destructive p-4 border border-destructive/50 rounded-md'>
+                <p>Could not connect to the database.</p>
+            </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="jury-select">Select Panel</Label>
+        <Select onValueChange={setSelectedJury} value={selectedJury} disabled={!selectedEventId || juriesLoading}>
+            <SelectTrigger id="jury-select" className="w-full">
+              <SelectValue placeholder={juriesLoading ? "Loading panels..." : "Select your panel..."} />
+            </SelectTrigger>
+            <SelectContent>
+              {juries && juries.sort((a,b) => a.panelNo - b.panelNo).map((jury) => (
                 <SelectItem key={jury.id} value={jury.panelNo.toString()}>
                   {jury.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        )}
-         {(status === 'success' && juries && juries.length === 0) && (
-          <div className='text-center text-sm text-muted-foreground p-4 border rounded-md'>
-            <p>No jury panels found.</p>
-            <p>An admin needs to add them via the admin dashboard.</p>
-          </div>
-        )}
-         {status === 'error' && (
-           <div className='text-center text-sm text-destructive p-4 border border-destructive/50 rounded-md'>
-            <p>Could not connect to the database.</p>
-            <p>Please ensure Firestore is enabled and permissions are set.</p>
-          </div>
-        )}
       </div>
 
        <div className="space-y-2">

@@ -1,6 +1,24 @@
 
 {
   "entities": {
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "Represents a hackathon or competition event.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the event."
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp when the event was created."
+        }
+      },
+      "required": ["name", "createdAt"]
+    },
     "Team": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Team",
@@ -68,7 +86,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Jury",
       "type": "object",
-      "description": "Represents a jury member.",
+      "description": "Represents a jury member for a specific event.",
       "properties": {
         "juryId": {
           "type": "string",
@@ -96,7 +114,7 @@
     "EvaluationCriterion": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "EvaluationCriterion",
-      "description": "A single criterion used for judging hackathon projects.",
+      "description": "A single criterion used for judging hackathon projects for a specific event.",
       "type": "object",
       "properties": {
         "name": {
@@ -153,43 +171,55 @@
   "firestore": {
     "structure": [
       {
-        "path": "/teams/{teamId}",
+        "path": "/events/{eventId}",
         "definition": {
-          "entityName": "Team",
+          "entityName": "Event",
           "schema": {
-            "$ref": "#/entities/Team"
+            "$ref": "#/entities/Event"
           },
-          "description": "Stores information about each team participating in the hackathon."
-        }
-      },
-      {
-        "path": "/scores/{teamId}",
-        "definition": {
-          "entityName": "Score",
-          "schema": {
-            "$ref": "#/entities/Score"
-          },
-          "description": "Stores scores given to a team by the jury members."
-        }
-      },
-      {
-        "path": "/juries/{juryId}",
-        "definition": {
-          "entityName": "Jury",
-          "schema": {
-            "$ref": "#/entities/Jury"
-          },
-          "description": "Stores information about jury members, including their passwords."
-        }
-      },
-      {
-        "path": "/evaluationCriteria/{criterionId}",
-        "definition": {
-          "entityName": "EvaluationCriterion",
-          "schema": {
-            "$ref": "#/entities/EvaluationCriterion"
-          },
-          "description": "Stores the list of all possible evaluation criteria and their active state."
+          "description": "Stores information about each event.",
+          "subcollections": [
+            {
+              "path": "teams/{teamId}",
+              "definition": {
+                "entityName": "Team",
+                "schema": {
+                  "$ref": "#/entities/Team"
+                },
+                "description": "Stores information about each team participating in this event."
+              }
+            },
+            {
+              "path": "scores/{teamId}",
+              "definition": {
+                "entityName": "Score",
+                "schema": {
+                  "$ref": "#/entities/Score"
+                },
+                "description": "Stores scores given to a team by the jury members for this event."
+              }
+            },
+            {
+              "path": "juries/{juryId}",
+              "definition": {
+                "entityName": "Jury",
+                "schema": {
+                  "$ref": "#/entities/Jury"
+                },
+                "description": "Stores information about jury members for this event."
+              }
+            },
+            {
+              "path": "evaluationCriteria/{criterionId}",
+              "definition": {
+                "entityName": "EvaluationCriterion",
+                "schema": {
+                  "$ref": "#/entities/EvaluationCriterion"
+                },
+                "description": "Stores the evaluation criteria for this event."
+              }
+            }
+          ]
         }
       },
       {

@@ -14,7 +14,7 @@ import type { EvaluationCriterion } from '@/lib/types';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Switch } from '@/components/ui/switch';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection, writeBatch, getDocs } from 'firebase/firestore';
+import { doc, collection, writeBatch, getDocs, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '../ui/button';
 import { Loader2, Edit } from 'lucide-react';
@@ -31,6 +31,7 @@ import {
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { useEvent } from '@/hooks/use-event';
 
 interface EditCriterionDialogProps {
   criterion: EvaluationCriterion;
@@ -91,10 +92,12 @@ interface CriteriaManagementProps {
 export function CriteriaManagement({ criteria: initialCriteria }: CriteriaManagementProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { eventId } = useEvent();
   const [isResetting, setIsResetting] = useState(false);
 
   const handleUpdate = (criterion: EvaluationCriterion, updates: Partial<EvaluationCriterion>) => {
-    const docRef = doc(firestore, 'evaluationCriteria', criterion.id);
+    if (!eventId) return;
+    const docRef = doc(firestore, `events/${eventId}/evaluationCriteria`, criterion.id);
     setDocumentNonBlocking(docRef, updates, { merge: true });
     toast({
       title: 'Criterion Updated',
@@ -107,26 +110,28 @@ export function CriteriaManagement({ criteria: initialCriteria }: CriteriaManage
   };
 
   const handleReset = async () => {
+    if (!eventId) return;
     setIsResetting(true);
     try {
         const batch = writeBatch(firestore);
         
-        const criteriaCollection = collection(firestore, 'evaluationCriteria');
+        const criteriaCollection = collection(firestore, `events/${eventId}/evaluationCriteria`);
         const currentCriteriaSnapshot = await getDocs(criteriaCollection);
         currentCriteriaSnapshot.docs.forEach(doc => {
             batch.delete(doc.ref);
         });
 
-        defaultCriteria.forEach(c => {
-            const docRef = doc(firestore, 'evaluationCriteria', c.id);
-            batch.set(docRef, c);
-        });
+        for (const c of defaultCriteria) {
+            // We must add them one by one to get new random IDs
+            const newDocRef = doc(criteriaCollection);
+            batch.set(newDocRef, { ...c, id: newDocRef.id });
+        }
         
         await batch.commit();
 
         toast({
             title: 'Criteria Reset',
-            description: 'Evaluation criteria have been reset to the default set.',
+            description: 'Evaluation criteria have been reset to the default set for this event.',
         });
     } catch (error) {
         console.error("Failed to reset criteria:", error);

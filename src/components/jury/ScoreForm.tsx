@@ -23,10 +23,12 @@ import { Loader2, Edit } from 'lucide-react';
 import { doc, collection, query, where } from 'firebase/firestore';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { Input } from '../ui/input';
+import { useEvent } from '@/hooks/use-event';
+import { useRouter } from 'next/navigation';
+
 
 const createScoreSchema = (criteria: EvaluationCriterion[]) => {
   const schemaObject = criteria.reduce((acc, criterion) => {
-    // Ensure that each criterion in the schema uses its own specific maxScore.
     acc[criterion.id] = z.coerce.number()
         .min(0, { message: "Must be 0 or more." })
         .max(criterion.maxScore, { message: `Score cannot exceed ${criterion.maxScore}.` });
@@ -51,9 +53,10 @@ interface ScoreFormProps {
 interface ScoreFormContentProps extends ScoreFormProps {
     activeCriteria: EvaluationCriterion[];
     labels: { teamLabel: string, projectLabel: string };
+    eventId: string;
 }
 
-function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, labels }: ScoreFormContentProps) {
+function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, labels, eventId }: ScoreFormContentProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,7 +103,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
     function onSubmit(data: ScoreFormData) {
         setIsSubmitting(true);
         
-        const scoreDocRef = doc(firestore, 'scores', team.id);
+        const scoreDocRef = doc(firestore, `events/${eventId}/scores`, team.id);
         const panelField = `panel${juryPanel}`;
 
         const finalTotal = Object.values(data.scores).reduce((acc, current) => acc + (Number(current) || 0), 0);
@@ -175,7 +178,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
                             </div>
                         ) : (
                             <div className="text-center text-muted-foreground py-8">
-                                No active evaluation criteria have been set by the admin.
+                                No active evaluation criteria have been set for this event.
                             </div>
                         )}
 
@@ -223,6 +226,14 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
 
 export function ScoreForm(props: ScoreFormProps) {
   const firestore = useFirestore();
+  const { eventId, isEventLoading } = useEvent();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isEventLoading && !eventId) {
+      router.push('/');
+    }
+  }, [eventId, isEventLoading, router]);
 
   const labelsDocRef = useMemoFirebase(() => doc(firestore, 'appConfig', 'labels'), [firestore]);
   const { data: labelsData, isLoading: labelsLoading } = useDoc<AppLabels>(labelsDocRef);
@@ -232,10 +243,13 @@ export function ScoreForm(props: ScoreFormProps) {
     projectLabel: labelsData?.projectLabel || 'Project Name',
   }), [labelsData]);
 
-  const criteriaQuery = useMemoFirebase(() => query(collection(firestore, 'evaluationCriteria'), where('active', '==', true)), [firestore]);
+  const criteriaQuery = useMemoFirebase(() => {
+    if (!eventId) return null;
+    return query(collection(firestore, `events/${eventId}/evaluationCriteria`), where('active', '==', true));
+  }, [firestore, eventId]);
   const { data: activeCriteria, isLoading: criteriaLoading } = useCollection<EvaluationCriterion>(criteriaQuery);
 
-  const isLoading = criteriaLoading || labelsLoading || !activeCriteria;
+  const isLoading = isEventLoading || criteriaLoading || labelsLoading || !activeCriteria || !eventId;
 
   if (isLoading) {
     return (
@@ -247,6 +261,5 @@ export function ScoreForm(props: ScoreFormProps) {
     );
   }
   
-  // Ensure activeCriteria is not undefined before passing it
-  return <ScoreFormContent {...props} activeCriteria={activeCriteria || []} labels={labels} />;
+  return <ScoreFormContent {...props} activeCriteria={activeCriteria || []} labels={labels} eventId={eventId!} />;
 }

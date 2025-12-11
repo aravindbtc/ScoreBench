@@ -8,8 +8,6 @@ import type { Jury } from './types';
 
 export async function verifyAdminPassword(password: string) {
   'use server';
-  // This is a simple check. In a real-world scenario, you'd use a more secure
-  // method, potentially involving a database or a secure secret management service.
   if (password === process.env.ADMIN_PASSWORD) {
     return { success: true };
   }
@@ -17,16 +15,16 @@ export async function verifyAdminPassword(password: string) {
 }
 
 
-export async function verifyJuryPassword(panelNo: string, password: string) {
+export async function verifyJuryPassword(eventId: string, panelNo: string, password: string) {
     'use server';
     try {
         const panelNumber = parseInt(panelNo, 10);
-        const juriesCollection = collection(db, 'juries');
+        const juriesCollection = collection(db, `events/${eventId}/juries`);
         const q = query(juriesCollection, where('panelNo', '==', panelNumber));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-            return { success: false, message: 'Invalid panel selected.' };
+            return { success: false, message: 'Invalid panel selected for this event.' };
         }
 
         const juryDoc = querySnapshot.docs[0];

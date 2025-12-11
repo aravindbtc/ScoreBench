@@ -12,15 +12,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Loader2 } from 'lucide-react';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
+import { useEvent } from '@/hooks/use-event';
 
 const jsonSchema = z.object({
   jsonContent: z.string().min(1, 'JSON content cannot be empty.'),
 });
 
-// Allow projectName to be an empty string by removing .min(1)
 const teamSchema = z.object({
   teamName: z.string().min(1, 'teamName is required.'),
-  projectName: z.string(), // Removed .min(1) to allow empty strings
+  projectName: z.string(), 
 });
 
 const teamsArraySchema = z.array(teamSchema);
@@ -29,6 +29,7 @@ export function TeamJsonPasteForm() {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { eventId } = useEvent();
 
   const form = useForm<{ jsonContent: string }>({
     resolver: zodResolver(jsonSchema),
@@ -38,6 +39,10 @@ export function TeamJsonPasteForm() {
   });
 
   const onSubmit = async (data: { jsonContent: string }) => {
+    if (!eventId) {
+        toast({ title: "Error", description: "No event selected.", variant: "destructive" });
+        return;
+    }
     setIsUploading(true);
     try {
       const jsonData = JSON.parse(data.jsonContent);
@@ -70,7 +75,7 @@ export function TeamJsonPasteForm() {
       }
 
       const batch = writeBatch(firestore);
-      const teamsCollection = collection(firestore, 'teams');
+      const teamsCollection = collection(firestore, `events/${eventId}/teams`);
       parsedTeams.forEach((team) => {
         const docRef = doc(teamsCollection);
         batch.set(docRef, team);

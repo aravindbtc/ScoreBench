@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { useEvent } from '@/hooks/use-event';
 
 const jurySchema = z.object({
   name: z.string().min(2, 'Jury name must be at least 2 characters.'),
@@ -40,6 +41,7 @@ export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { eventId } = useEvent();
 
   const form = useForm<JuryFormData>({
     resolver: zodResolver(jurySchema),
@@ -51,16 +53,20 @@ export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
   });
 
   const onSubmit = async (data: JuryFormData) => {
+    if (!eventId) {
+        toast({ title: "Error", description: "No event selected.", variant: "destructive" });
+        return;
+    }
     setIsSubmitting(true);
     try {
-      const juriesCollection = collection(firestore, 'juries');
+      const juriesCollection = collection(firestore, `events/${eventId}/juries`);
       const q = query(juriesCollection, where('panelNo', '==', data.panelNo));
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
         toast({
           title: 'Error',
-          description: `Panel number ${data.panelNo} already exists.`,
+          description: `Panel number ${data.panelNo} already exists for this event.`,
           variant: 'destructive',
         });
         setIsSubmitting(false);
@@ -76,8 +82,8 @@ export function AddJuryDialog({ isOpen, onOpenChange }: AddJuryDialogProps) {
       form.reset();
       onOpenChange(false);
     } catch (error) {
-      // This will be handled by the global error listener
       console.error('Failed to add jury:', error);
+      toast({ title: "Error", description: "Could not add jury. See console for details.", variant: "destructive" });
     }
     setIsSubmitting(false);
   };

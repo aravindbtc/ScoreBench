@@ -14,46 +14,62 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn();
     }
-
-    /**
-     * Teams Collection:
-     * - Admins can read, list, create, update, and delete teams.
-     * - Juries (any signed-in user) can read and list teams to evaluate them.
-     */
-    match /teams/{teamId} {
-      allow read, list: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    /**
-     * Scores Collection:
-     * - Admins can read all scores for the dashboard.
-     * - Juries (any signed-in user) can read scores to see if they've already voted.
-     * - Juries can create and update their own panel's score, but not others'.
-     * - Admins can delete scores when deleting a team.
-     */
-    match /scores/{teamId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      // Allow a jury to update ONLY their panel's data, or allow an admin to update avgScore or consolidatedFeedback.
-      allow update: if isSignedIn() && (
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel1']) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel2']) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel3']) ||
-        (isAdmin() && request.resource.data.diff(resource.data).hasAny(['avgScore', 'consolidatedFeedback']))
-      );
-      // Allow admins to delete.
-      allow delete: if isAdmin();
-    }
-
-    /**
-     * Juries Collection:
-     * - Anyone can read/list juries for the login dropdown.
-     * - Only admins can create, update, or delete jury members.
-     */
-    match /juries/{juryId} {
+    
+    // Anyone can read the list of events for the login page
+    match /events/{eventId} {
       allow read, list: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin(); // Only admins can create/update events
+
+      /**
+       * Teams Collection:
+       * - Admins can read, list, create, update, and delete teams.
+       * - Juries (any signed-in user) can read and list teams to evaluate them.
+       */
+      match /teams/{teamId} {
+        allow read, list: if isSignedIn();
+        allow write: if isAdmin();
+      }
+
+      /**
+       * Scores Collection:
+       * - Admins can read all scores for the dashboard.
+       * - Juries (any signed-in user) can read scores to see if they've already voted.
+       * - Juries can create and update their own panel's score, but not others'.
+       * - Admins can delete scores when deleting a team.
+       */
+      match /scores/{teamId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        // Allow a jury to update ONLY their panel's data, or allow an admin to update avgScore or consolidatedFeedback.
+        allow update: if isSignedIn() && (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel1']) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel2']) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel3']) ||
+          (isAdmin() && request.resource.data.diff(resource.data).hasAny(['avgScore', 'consolidatedFeedback']))
+        );
+        // Allow admins to delete.
+        allow delete: if isAdmin();
+      }
+
+      /**
+       * Juries Collection:
+       * - Anyone can read/list juries for the login dropdown for a specific event.
+       * - Only admins can create, update, or delete jury members.
+       */
+      match /juries/{juryId} {
+        allow read, list: if true;
+        allow write: if isAdmin();
+      }
+
+      /**
+       * EvaluationCriteria Collection:
+       * - Juries (signed-in users) can read the criteria to build the form.
+       * - Only admins can change which criteria are active.
+       */
+      match /evaluationCriteria/{criterionId} {
+        allow read, list: if true;
+        allow write: if isAdmin();
+      }
     }
 
     /**
@@ -63,16 +79,6 @@ service cloud.firestore {
      */
     match /appConfig/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    /**
-     * EvaluationCriteria Collection:
-     * - Juries (signed-in users) can read the criteria to build the form.
-     * - Only admins can change which criteria are active.
-     */
-    match /evaluationCriteria/{criterionId} {
-      allow read, list: if true;
       allow write: if isAdmin();
     }
   }
