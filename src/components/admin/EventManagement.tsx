@@ -160,23 +160,56 @@ export function EventManagement() {
                 setIsMigrating(true);
                  toast({
                     title: 'First-time Setup',
-                    description: 'Creating your first event container. Please wait...',
+                    description: 'Migrating existing data to a new multi-event structure. Please wait...',
                 });
                 try {
                     // Create the initial "Unnamed Event"
-                    await addDoc(collection(firestore, 'events'), {
-                        name: 'Unnamed Event',
-                        createdAt: serverTimestamp(),
-                    });
-                     toast({
-                        title: 'Setup Complete!',
-                        description: 'Your first event "Unnamed Event" is ready. Please re-upload your data to this event.',
-                    });
+                    const newEventRef = doc(collection(firestore, 'events'));
+                    await writeBatch(firestore)
+                        .set(newEventRef, {
+                            name: 'Unnamed Event',
+                            createdAt: serverTimestamp(),
+                        })
+                        .commit();
+                    
+                    const batch = writeBatch(firestore);
+
+                    // Define collections to migrate
+                    const collectionsToMigrate = ['teams', 'scores', 'juries', 'evaluationCriteria'];
+                    let totalDocsMigrated = 0;
+
+                    for (const collectionName of collectionsToMigrate) {
+                        const oldCollectionQuery = query(collection(firestore, collectionName));
+                        const oldDocsSnapshot = await getDocs(oldCollectionQuery);
+                        
+                        if (!oldDocsSnapshot.empty) {
+                            const newSubCollection = collection(firestore, `events/${newEventRef.id}/${collectionName}`);
+                            oldDocsSnapshot.forEach(docSnapshot => {
+                                const newDocRef = doc(newSubCollection, docSnapshot.id);
+                                batch.set(newDocRef, docSnapshot.data());
+                                totalDocsMigrated++;
+                            });
+                        }
+                    }
+
+                    if (totalDocsMigrated > 0) {
+                        await batch.commit();
+                        toast({
+                            title: 'Migration Complete!',
+                            description: `Successfully migrated ${totalDocsMigrated} records to "Unnamed Event".`,
+                        });
+                    } else {
+                         toast({
+                            title: 'Setup Complete!',
+                            description: 'Your first event "Unnamed Event" is ready.',
+                        });
+                    }
+
                 } catch (error) {
-                    console.error("Failed to create initial event:", error);
+                    console.error("Failed to migrate data:", error);
                     toast({
-                        title: 'Setup Failed',
-                        description: 'Could not create the initial event. Check the console.',
+                        title: 'Migration Failed',
+                        description: 'Could not migrate existing data. Please check the console.',
                         variant: 'destructive',
                     });
                 } finally {
@@ -195,8 +228,8 @@ export function EventManagement() {
         if (!events) return [];
         // Handle potential null createdAt during migration
         return [...events].sort((a,b) => {
-            const timeA = a.createdAt?.toDate()?.getTime() || 0;
-            const timeB = b.createdAt?.toDate()?.getTime() || 0;
+            const timeA = a.createdAt?.toDate?.()?.getTime() || 0;
+            const timeB = b.createdAt?.toDate?.()?.getTime() || 0;
             return timeB - timeA;
         });
     }, [events]);
