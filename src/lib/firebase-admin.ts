@@ -43,5 +43,6 @@ try {
     db = {} as Firestore;
 }
 
-
+// Do not export db directly to comply with "use server" module rules.
+// It will be imported directly by other server files.
 export { db };
