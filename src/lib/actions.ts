@@ -12,27 +12,26 @@ function getAdminApp(): App {
 
     const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
     
-    if (serviceAccountEnv) {
-        let serviceAccount;
-        try {
-            serviceAccount = JSON.parse(serviceAccountEnv);
-        } catch (e: any) {
-            if (e instanceof SyntaxError) {
-                console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string.');
-                // This specific error is critical for debugging.
-                throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
-            }
-            throw e; // Re-throw other errors
+    if (!serviceAccountEnv) {
+        // This is a critical failure. The app cannot function in any meaningful way without this.
+        throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not set. Please add it to your .env.local file as a single-line JSON string.');
+    }
+
+    let serviceAccount;
+    try {
+        serviceAccount = JSON.parse(serviceAccountEnv);
+    } catch (e: any) {
+        if (e instanceof SyntaxError) {
+            console.error('CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT. The environment variable is likely not a valid, single-line JSON string.');
+            // This specific error is critical for debugging.
+            throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not valid JSON. Please ensure it is a single-line, escaped string.');
         }
-        
-        return initializeApp({
-            credential: cert(serviceAccount),
-        });
-    } 
+        throw e; // Re-throw other errors
+    }
     
-    // This fallback is unlikely to have permissions to delete.
-    // Throw an error to make it clear the service account is missing.
-    throw new Error('Deletion Failed: The FIREBASE_SERVICE_ACCOUNT environment variable is not set. Please add it to your .env.local file.');
+    return initializeApp({
+        credential: cert(serviceAccount),
+    });
 }
 
 

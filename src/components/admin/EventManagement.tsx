@@ -209,6 +209,7 @@ export function EventManagement() {
                 title: 'Event Deleted',
                 description: `"${eventToDelete.name}" has been permanently removed.`,
             });
+            // Optimistically update the UI
             setDisplayEvents(prevEvents => prevEvents.filter(e => e.id !== eventToDelete.id));
             if (eventId === eventToDelete.id) {
                 setEventId(null);
