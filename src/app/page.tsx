@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -15,14 +16,14 @@ export default function PreLandingPage() {
         <LoginBackground configId="preLandingBackground" />
       </Suspense>
       
-      <div className="z-10 flex flex-col items-center space-y-6">
+      <div className="z-10 flex flex-col items-center space-y-6 rounded-xl bg-background/20 backdrop-blur-sm p-8">
         <div className="absolute top-6 left-6">
             <AppLogo />
         </div>
-        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-lg">
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-primary drop-shadow-lg">
             Welcome to ScoreBench
         </h1>
-        <p className="text-lg md:text-xl text-white/90 drop-shadow-md max-w-2xl">
+        <p className="text-lg md:text-xl text-foreground/80 drop-shadow-md max-w-2xl">
             The modern, real-time evaluation platform for hackathons, ideathons, and competitions.
         </p>
         <Button asChild size="lg">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
@@ -26,10 +27,10 @@ export default function LoginPage() {
         <AppLogo />
       </div>
 
-      <Card className="w-full max-w-md shadow-2xl bg-background/50 backdrop-blur-sm">
+      <Card className="w-full max-w-md shadow-2xl bg-background/20 backdrop-blur-sm">
         <CardHeader className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight">Select Your Role</h2>
-          <p className="text-muted-foreground">Choose whether you are a Jury member or an Administrator.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-primary">Select Your Role</h2>
+          <p className="text-muted-foreground text-foreground/80">Choose whether you are a Jury member or an Administrator.</p>
         </CardHeader>
         <CardContent>
           {isClient ? (
