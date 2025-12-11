@@ -14,6 +14,8 @@ import { ImageUploadForm } from './ImageUploadForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { useEvent } from '@/hooks/use-event';
+import type { Event } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -23,13 +25,15 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface CustomizeLoginFormProps {
-    configId: 'loginBackground' | 'preLandingBackground';
+    configId: 'preLandingBackground' | 'loginBackground' | 'juryLoginBackground';
+    isEventSpecific?: boolean;
 }
 
-export function CustomizeLoginForm({ configId }: CustomizeLoginFormProps) {
+export function CustomizeLoginForm({ configId, isEventSpecific = false }: CustomizeLoginFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { eventId } = useEvent();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -40,16 +44,29 @@ export function CustomizeLoginForm({ configId }: CustomizeLoginFormProps) {
 
   const docRef = useMemoFirebase(() => {
     if (!firestore) return null;
+    if (isEventSpecific) {
+        return eventId ? doc(firestore, 'events', eventId) : null;
+    }
     return doc(firestore, 'appConfig', configId);
-  }, [firestore, configId]);
+  }, [firestore, configId, isEventSpecific, eventId]);
   
-  const { data: existingData } = useDoc<{ imageUrl: string }>(docRef);
+  const { data: existingData } = useDoc<Event | { imageUrl: string }>(docRef);
 
   useEffect(() => {
-    if (existingData?.imageUrl) {
-        form.setValue('imageUrl', existingData.imageUrl);
+    if (existingData) {
+        let url;
+        if (isEventSpecific) {
+            url = (existingData as Event).backgroundImageUrl;
+        } else {
+            url = (existingData as { imageUrl: string }).imageUrl;
+        }
+        if (url) {
+            form.setValue('imageUrl', url);
+        } else {
+             form.setValue('imageUrl', '');
+        }
     }
-  }, [existingData, form]);
+  }, [existingData, form, isEventSpecific]);
 
   const handleUploadComplete = (url: string) => {
     form.setValue('imageUrl', url, { shouldValidate: true });
@@ -60,7 +77,10 @@ export function CustomizeLoginForm({ configId }: CustomizeLoginFormProps) {
   };
   
   const onSubmit = async (data: FormValues) => {
-    if (!docRef) return;
+    if (!docRef) {
+        toast({ title: "Error", description: isEventSpecific ? "No event selected." : "Configuration path is missing.", variant: "destructive" });
+        return;
+    };
     if (!data.imageUrl) {
         toast({
             title: 'Error',
@@ -71,7 +91,8 @@ export function CustomizeLoginForm({ configId }: CustomizeLoginFormProps) {
     }
     setIsSaving(true);
     
-    setDocumentNonBlocking(docRef, { imageUrl: data.imageUrl });
+    const dataToSave = isEventSpecific ? { backgroundImageUrl: data.imageUrl } : { imageUrl: data.imageUrl };
+    setDocumentNonBlocking(docRef, dataToSave, { merge: true });
 
     toast({
         title: 'Success!',

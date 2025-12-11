@@ -6,46 +6,55 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useEffect } from 'react';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { Event } from '@/lib/types';
+import { useEvent } from '@/hooks/use-event';
 
 interface LoginBackgroundProps {
-  configId: 'loginBackground' | 'preLandingBackground';
-  imageUrl?: string | null;
+  configId?: 'loginBackground' | 'preLandingBackground';
+  isEventSpecific?: boolean;
 }
 
-export function LoginBackground({ configId, imageUrl: imageUrlProp }: LoginBackgroundProps) {
+export function LoginBackground({ configId, isEventSpecific = false }: LoginBackgroundProps) {
   const firestore = useFirestore();
-  const [imageUrl, setImageUrl] = useState<string | undefined>(imageUrlProp || undefined);
+  const { eventId, isEventLoading } = useEvent();
+  
+  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
 
-  // Hook to fetch the customized URL from Firestore for global backgrounds
-  const globalBgConfigRef = useMemoFirebase(() => {
-    // Only fetch global config if no specific imageUrl is passed
-    if (!firestore || imageUrlProp) return null;
-    return doc(firestore, 'appConfig', configId);
-  }, [firestore, configId, imageUrlProp]);
-
-  const { data: customBgData, isLoading } = useDoc<{imageUrl: string}>(globalBgConfigRef);
-
-  // Effect to update the image URL when custom data is loaded or prop changes
-  useEffect(() => {
-    if (imageUrlProp) {
-        setImageUrl(imageUrlProp);
-    } else if (customBgData?.imageUrl) {
-      setImageUrl(customBgData.imageUrl);
-    } else {
-        // Fallback to a default if no custom URL is set, only after loading is complete
-        if (!isLoading && !imageUrlProp) {
-            setImageUrl('https://images.unsplash.com/photo-1554189097-9e73e9363344?q=80&w=2070&auto=format&fit=crop');
-        }
+  const docRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    if (isEventSpecific) {
+        return eventId ? doc(firestore, 'events', eventId) : null;
     }
-  }, [customBgData, isLoading, imageUrlProp]);
+    return configId ? doc(firestore, 'appConfig', configId) : null;
+  }, [firestore, configId, isEventSpecific, eventId]);
 
-  if (isLoading || !imageUrl) {
+  const { data, isLoading } = useDoc<Event | { imageUrl: string }>(docRef);
+
+  useEffect(() => {
+    let url;
+    if (isEventSpecific) {
+        url = (data as Event)?.backgroundImageUrl;
+    } else {
+        url = (data as { imageUrl: string })?.imageUrl;
+    }
+
+    if (url) {
+        setImageUrl(url);
+    } else if (!isLoading && !isEventLoading) {
+        // Fallback only after confirming no specific URL is set and we are not loading
+        setImageUrl('https://images.unsplash.com/photo-1554189097-9e73e9363344?q=80&w=2070&auto=format&fit=crop');
+    }
+  }, [data, isLoading, isEventLoading, isEventSpecific]);
+  
+  const shouldShowSkeleton = isLoading || isEventLoading || !imageUrl;
+
+  if (shouldShowSkeleton) {
     return <Skeleton className="absolute inset-0 -z-10" />;
   }
 
   return (
     <Image
-      key={imageUrl} // Add key to force re-render on URL change
+      key={imageUrl}
       src={imageUrl}
       alt={"Login background"}
       fill

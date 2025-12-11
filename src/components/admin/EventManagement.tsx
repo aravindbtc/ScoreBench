@@ -7,7 +7,7 @@ import type { Event } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, PlusCircle, ArrowRight, Edit, Check, Image as ImageIcon } from 'lucide-react';
+import { Loader2, PlusCircle, ArrowRight, Edit, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useEvent } from '@/hooks/use-event';
 import { useRouter } from 'next/navigation';
@@ -20,7 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { EventImageDialog } from './EventImageDialog';
 
 function CreateEventDialog({ onEventCreated }: { onEventCreated: () => void }) {
     const [eventName, setEventName] = useState('');
@@ -90,7 +89,6 @@ function EventCard({ event }: { event: Event }) {
     const [isEditing, setIsEditing] = useState(false);
     const [eventName, setEventName] = useState(event.name);
     const [isSaving, setIsSaving] = useState(false);
-    const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
     const firestore = useFirestore();
     const { toast } = useToast();
 
@@ -140,13 +138,6 @@ function EventCard({ event }: { event: Event }) {
                     Manage <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
             </CardContent>
-             <div className="border-t p-2 flex justify-end">
-                <Button variant="outline" size="sm" onClick={() => setIsImageDialogOpen(true)}>
-                    <ImageIcon className="mr-2 h-4 w-4" />
-                    Edit Background
-                </Button>
-            </div>
-            <EventImageDialog event={event} isOpen={isImageDialogOpen} onOpenChange={setIsImageDialogOpen} />
         </Card>
     );
 }
@@ -193,8 +184,8 @@ export function EventManagement() {
         if (!events) return [];
         // Handle potential null createdAt during creation
         return [...events].sort((a,b) => {
-            const timeA = a.createdAt?.toDate?.()?.getTime() || 0;
-            const timeB = b.createdAt?.toDate?.()?.getTime() || 0;
+            const timeA = a.createdAt?.toDate?.().getTime() || 0;
+            const timeB = b.createdAt?.toDate?.().getTime() || 0;
             return timeB - timeA;
         });
     }, [events]);

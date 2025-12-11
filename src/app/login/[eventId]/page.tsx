@@ -97,7 +97,7 @@ export default function JuryPanelLoginPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4">
         <Suspense fallback={<Skeleton className="absolute inset-0 -z-10" />}>
-            <LoginBackground configId="loginBackground" imageUrl={eventData?.backgroundImageUrl} />
+            <LoginBackground isEventSpecific={true} />
         </Suspense>
         
         <div className="absolute top-6 left-6">
