@@ -40,12 +40,13 @@ service cloud.firestore {
       match /scores/{teamId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn();
-        // Allow a jury to update ONLY their panel's data, or allow an admin to update avgScore or consolidatedFeedback.
+        // Allow a jury to update ONLY their panel's data and the avgScore, 
+        // or allow an admin to update other fields.
         allow update: if isSignedIn() && (
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel1']) ||
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel2']) ||
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel3']) ||
-          (isAdmin() && request.resource.data.diff(resource.data).hasAny(['avgScore', 'consolidatedFeedback']))
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel1', 'avgScore']) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel2', 'avgScore']) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['panel3', 'avgScore']) ||
+          (isAdmin() && request.resource.data.diff(resource.data).hasAny(['avgScore', 'consolidatedFeedback', 'panel1', 'panel2', 'panel3']))
         );
         // Allow admins to delete.
         allow delete: if isAdmin();
