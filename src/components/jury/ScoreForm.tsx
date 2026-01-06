@@ -96,7 +96,10 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
     const watchedScores = form.watch('scores');
     
     const totalScore = useMemo(() => {
-      return Object.values(watchedScores).reduce((acc, current) => acc + (Number(current) || 0), 0);
+        if (!watchedScores) return 0;
+        return Object.values(watchedScores).reduce((acc, current) => {
+            return acc + (Number(current) || 0);
+        }, 0);
     }, [watchedScores]);
 
 
