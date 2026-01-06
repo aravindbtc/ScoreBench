@@ -97,11 +97,7 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
     
     const totalScore = useMemo(() => {
         if (!watchedScores) return 0;
-        // Correctly sum the numbers from the object values
-        return Object.values(watchedScores).reduce((acc, current) => {
-            const num = Number(current);
-            return acc + (isNaN(num) ? 0 : num);
-        }, 0);
+        return Object.values(watchedScores).reduce((acc, current) => acc + Number(current || 0), 0);
     }, [watchedScores]);
 
 
@@ -120,10 +116,10 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
             juryPanel === 3 ? panelScoreData : existingScores?.panel3,
         ];
 
-        const validScores = allPanelScores.filter((s): s is Score => s !== undefined && s.total !== undefined);
+        const validScores = allPanelScores.filter((s): s is Score => s !== undefined && typeof s.total === 'number');
         
         const avgScore = validScores.length > 0 
-            ? validScores.reduce((acc, s) => acc + (s.total / (s.maxScore || 1)) * 100, 0) / validScores.length
+            ? validScores.reduce((acc, s) => acc + s.total, 0) / validScores.length
             : 0;
         
         const finalData = {

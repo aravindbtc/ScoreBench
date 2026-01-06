@@ -68,31 +68,29 @@ export function AdminDashboard() {
   const combinedData: CombinedScoreData[] = useMemo(() => {
     if (!teams || !scores) return [];
 
-    const data = teams.map(team => {
-      const teamScores = scores.find(s => s.id === team.id) || { id: team.id };
-      
-      const allPanelScores: (Score | undefined)[] = [
-        teamScores.panel1,
-        teamScores.panel2,
-        teamScores.panel3,
-      ];
+    return teams.map(team => {
+        const teamScores = scores.find(s => s.id === team.id) || { id: team.id };
+        
+        const allPanelScores: (Score | undefined)[] = [
+            teamScores.panel1,
+            teamScores.panel2,
+            teamScores.panel3,
+        ];
 
-      const validScores = allPanelScores.filter((s): s is Score => s !== undefined && s.total !== undefined);
+        const validScores = allPanelScores.filter((s): s is Score => s !== undefined && typeof s.total === 'number');
 
-      const calculatedAvgScore = validScores.length > 0 
-        ? validScores.reduce((acc, s) => acc + (s.total / (s.maxScore || 1)) * 100, 0) / validScores.length
-        : 0;
+        const calculatedAvgScore = validScores.length > 0
+            ? validScores.reduce((acc, s) => acc + s.total, 0) / validScores.length
+            : 0;
 
-      return {
-        ...team,
-        scores: {
-            ...teamScores,
-            avgScore: calculatedAvgScore > 0 ? calculatedAvgScore : undefined,
-        }
-      };
-    });
-
-    return data.sort((a, b) => (b.scores.avgScore ?? 0) - (a.scores.avgScore ?? 0));
+        return {
+            ...team,
+            scores: {
+                ...teamScores,
+                avgScore: calculatedAvgScore > 0 ? calculatedAvgScore : undefined,
+            }
+        };
+    }).sort((a, b) => (b.scores.avgScore ?? 0) - (a.scores.avgScore ?? 0));
   }, [teams, scores]);
 
   const handleExport = async () => {
