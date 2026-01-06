@@ -97,8 +97,10 @@ function ScoreFormContent({ team, juryPanel, existingScores, activeCriteria, lab
     
     const totalScore = useMemo(() => {
         if (!watchedScores) return 0;
+        // Correctly sum the numbers from the object values
         return Object.values(watchedScores).reduce((acc, current) => {
-            return acc + (Number(current) || 0);
+            const num = Number(current);
+            return acc + (isNaN(num) ? 0 : num);
         }, 0);
     }, [watchedScores]);
 
